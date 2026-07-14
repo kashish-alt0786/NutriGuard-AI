@@ -79,14 +79,15 @@ if detected:
     if st.button("Add to History"):
         st.session_state.history.append({"date": datetime.datetime.now().strftime("%m/%d"), "food": detected, "gl": data['gl']})
         st.toast("Added!")
-    if st.session_state.history:
-# NEW — replace both chart lines with:
-if len(st.session_state.history) > 0:
-    df = pd.DataFrame(st.session_state.history)
-    st.bar_chart(df, x="date", y="gl")
-    st.dataframe(df, use_container_width=True)  # cleaner than table
+        if st.session_state.history:
+        # Check if history has any data inside
+        if len(st.session_state.history) > 0:
+            df = pd.DataFrame(st.session_state.history)
+            st.bar_chart(df, x="date", y="gl")
+            st.dataframe(df, use_container_width=True)
     else:
-        st.caption("Add meals to track GL trends.")
+        st.caption("Add meals to track GI trends.")
+.")
 
 st.divider()
 st.header("📚 Learning Corner & Architecture")

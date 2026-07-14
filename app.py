@@ -2,6 +2,8 @@ import streamlit as st
 from PIL import Image
 import pandas as pd
 
+# No need for dark, Streamlit light theme is default on mobile
+
 st.set_page_config(page_title="Indo-Korean Diabetes Meal AI", layout="wide")
 st.title("🇮🇳🇰🇷 Indo-Korean Diabetes Meal AI")
 st.caption("Upload a photo of Indian or Korean food → Get carbs, GI, and insulin help")

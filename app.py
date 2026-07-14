@@ -79,13 +79,12 @@ if detected:
     if st.button("Add to History"):
         st.session_state.history.append({"date": datetime.datetime.now().strftime("%m/%d"), "food": detected, "gl": data['gl']})
         st.toast("Added!")
- if st.session_state.history:
-    df = pd.DataFrame(st.session_state.history)
+    if st.session_state.history:
+        df = pd.DataFrame(st.session_state.history)
         st.bar_chart(df, x="date", y="gl")
         st.dataframe(df, use_container_width=True)
     else:
         st.caption("Add meals to track GL trends.")
-
 st.divider()
 st.header("📚 Learning Corner & Architecture")
 st.markdown("**GI/GL:** GI = speed of sugar rise, GL = GI x carbs eaten. Lower = steadier.")

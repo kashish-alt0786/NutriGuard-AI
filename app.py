@@ -336,7 +336,9 @@ st.markdown("""
 - Refined grains
 - Low dietary fiber
 """)
+st.markdown("""
 - Rapid glucose absorption expected
+""")
 st.divider()
 
 st.subheader("🥗 Healthier Alternative")

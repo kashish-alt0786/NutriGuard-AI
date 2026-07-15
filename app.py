@@ -341,11 +341,10 @@ with col1:
         f"{result['calories']} kcal"
     )
 
-        st.metric(
-            "Carbohydrates",
-            f"{result['carbs']} g"
-        )
-
+    st.metric(
+        "Carbohydrates",
+        f"{result['carbs']} g"
+    )
     with col2:
 
         st.metric(

@@ -1,221 +1,168 @@
-# 🥗 NutriGuard AI: Educational Nutrition Analysis for Diabetes Management
+# 💙 NutriGuard AI
 
-> AI-powered educational nutrition analysis tool for Indian and Korean meals using computer vision and public nutrition databases.
+## AI-Powered Diabetes Nutrition Intelligence System
 
-![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)
-![Streamlit](https://img.shields.io/badge/Streamlit-Live-red.svg)
-![License](https://img.shields.io/badge/License-MIT-green.svg)
+![Python](https://img.shields.io/badge/Python-3.9+-blue)
+![Streamlit](https://img.shields.io/badge/Streamlit-App-red)
+![Machine Learning](https://img.shields.io/badge/AI-Machine%20Learning-green)
+![Healthcare AI](https://img.shields.io/badge/Healthcare-Digital%20Health-purple)
 
 ---
 
 ## 🌐 Live Demo
 
-**Streamlit App**
+🚀 Try NutriGuard AI:
 
-https://indo-korean-diabetes-meal-ai-ekdguqlhsxsjnhsmeszucr.streamlit.app/
-
----
-
-## 📖 Overview
-
-NutriGuard AI is an educational Digital Health application that helps users better understand the nutritional characteristics of everyday meals.
-
-Users upload a food image, and the application estimates:
-
-- 🍚 Food identification
-- 🥗 Nutritional composition
-- 📊 Estimated Glycemic Index (GI)
-- 📈 Estimated Glycemic Load (GL)
-- 💡 Healthier meal alternatives
-
-The project focuses on Indian and Korean cuisines while supporting many commonly recognized foods.
+https://nutriguard-ai-rrzi6rnezvcba9dhtgzlrm.streamlit.app/
 
 ---
 
-## 🎯 Project Objectives
+## 📌 Overview
 
-- Promote nutrition literacy for diabetes awareness
-- Demonstrate practical applications of Artificial Intelligence in Medical IT
-- Compare Indian and Korean dietary choices
-- Encourage healthier food substitutions through explainable recommendations
+**NutriGuard AI** is an AI-powered nutrition intelligence system designed to help users make diabetes-aware food decisions.
+
+The application combines **Artificial Intelligence, Machine Learning, nutrition analysis, and healthcare informatics** to analyze meals and provide personalized dietary insights.
+
+The goal is to support preventive healthcare by transforming food information into understandable health recommendations.
 
 ---
 
-## 🏗 System Architecture
+# ✨ Key Features
+
+## 🍽️ Food Nutrition Analysis
+
+- Analyze food items and meals
+- Estimate nutritional values:
+  - Calories
+  - Carbohydrates
+  - Protein
+  - Fat
+  - Fiber
+
+---
+
+## 🩺 Diabetes-Aware Insights
+
+Provides nutrition guidance based on diabetes-related considerations:
+
+- Carbohydrate awareness
+- Glycemic impact estimation
+- Healthier food alternatives
+- Balanced meal suggestions
+
+---
+
+## 🤖 Artificial Intelligence Integration
+
+NutriGuard AI integrates machine learning concepts for:
+
+- Food intelligence
+- Nutrition prediction
+- Personalized recommendations
+- Health-focused decision support
+
+---
+
+## 🔍 Explainable AI Approach
+
+The system focuses on transparency by explaining:
+
+- Why a food choice may be beneficial
+- Potential nutritional concerns
+- Factors affecting recommendations
+
+Explainability is important in healthcare AI because users should understand AI-generated suggestions.
+
+---
+
+# 🏗️ System Architecture
 
 ```
-Meal Photo
-      │
-      ▼
-Food Recognition
-(Open-source Vision Model)
-      │
-      ▼
-Nutrition Database
-USDA + ICMR + Korean Food DB
-      │
-      ▼
-Nutrition Analysis
-Calories
-Carbohydrates
-Protein
-Fat
-Fiber
-      │
-      ▼
-Estimated Glycemic Impact
-Low • Moderate • High
-      │
-      ▼
-Healthy Meal Suggestions
-Indian ↔ Korean Alternatives
-      │
-      ▼
-Educational Disclaimer
-```
-
----
-
-## ✨ Features
-
-### 📷 AI Food Recognition
-
-- Upload meal photographs
-- AI estimates food items present
-- Supports Indian and Korean cuisine
-
----
-
-### 📊 Nutrition Analysis
-
-Displays estimated
-
-- Calories
-- Carbohydrates
-- Protein
-- Fat
-- Fiber
-
----
-
-### 📈 Glycemic Assessment
-
-Displays estimated
-
-- Glycemic Index (GI)
-- Glycemic Load (GL)
-- Overall Glycemic Impact
-
-Categories
-
-- 🟢 Low
-- 🟡 Moderate
-- 🔴 High
-
----
-
-### 💡 Healthy Food Suggestions
-
-Provides healthier alternatives such as
-
-| Current Meal | Suggested Alternative |
-|--------------|----------------------|
-| White Rice Bibimbap | Brown Rice Bibimbap |
-| Paratha | Whole Wheat Chapati |
-| Cake | Fruit + Yogurt |
-
-Each recommendation includes a short explanation.
-
----
-
-### 📚 Meal History
-
-Users can review previous analyses to observe dietary trends over time.
-
----
-
-## 📸 Screenshots
-
-### Home Page
-
-```
-Add screenshot here
-```
-
-### Nutrition Analysis
-
-```
-Add screenshot here
-```
-
-### Healthy Meal Suggestions
-
-```
-Add screenshot here
+User Food Input
+        |
+        ↓
+Food Analysis Engine
+        |
+        ↓
+Nutrition Information Processing
+        |
+        ↓
+Diabetes-Aware Recommendation System
+        |
+        ↓
+Explainable Health Insights
 ```
 
 ---
 
-## 🛠 Technology Stack
+# 🛠️ Technology Stack
+
+## Programming
 
 - Python
+
+## Application Framework
+
 - Streamlit
+
+## Machine Learning
+
+- Scikit-learn
+- Machine Learning Models
+
+## Data Processing
+
 - Pandas
-- Pillow
-- Google Gemini Vision API
-- Public Nutrition Databases
+- NumPy
+
+## Healthcare AI Concepts
+
+- Digital Health
+- Personalized Nutrition
+- Explainable AI
 
 ---
 
-## 📂 Data Sources
+# 📂 Project Structure
 
-Nutritional estimates are based on publicly available food composition resources including:
+```
+NutriGuard-AI/
 
-- USDA FoodData Central
-- ICMR-NIN Indian Food Composition Tables
-- Korean Food Composition Database
-
-These values are intended for educational purposes and may differ from laboratory analysis.
-
----
-
-## ⚠ Limitations
-
-- Food recognition depends on image quality.
-- Portion estimation is approximate.
-- Nutritional values are estimated from public databases.
-- Glycemic Index values vary between preparation methods.
-- The application does not diagnose diabetes or provide medical treatment.
-
----
-
-## 🚀 Future Improvements
-
-- OCR for packaged food labels
-- Open Food Facts integration
-- Automatic portion estimation
-- Expanded multilingual food database
-- Improved nutrition estimation accuracy
-- Evaluation with real users
-- Exploration of interoperability standards such as HL7 FHIR
-
----
-
-## 📦 Installation
-
-Clone the repository
-
-```bash
-git clone https://github.com/kashish-alt0786/Indo-Korean-Diabetes-Meal-AI.git
+│
+├── app.py
+├── requirements.txt
+├── README.md
+│
+├── models/
+│
+├── data/
+│
+└── assets/
 ```
 
-Install dependencies
+---
+
+# 🚀 Installation
+
+Clone the repository:
+
+```bash
+git clone https://github.com/kashish-alt0786/NutriGuard-AI.git
+```
+
+Move into the project folder:
+
+```bash
+cd NutriGuard-AI
+```
+
+Install dependencies:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-Run locally
+Run the application:
 
 ```bash
 streamlit run app.py
@@ -223,49 +170,73 @@ streamlit run app.py
 
 ---
 
-## 📁 Project Structure
+# 📊 Healthcare Application
 
-```
-NutriGuard-AI/
-│
-├── app.py
-├── requirements.txt
-├── nutrition_database.csv
-├── screenshots/
-├── assets/
-├── README.md
-└── LICENSE
-```
+NutriGuard AI explores the intersection of:
+
+- Artificial Intelligence
+- Biomedical Informatics
+- Nutrition Science
+- Preventive Healthcare
+
+The project aims to demonstrate how AI can assist users in making informed dietary decisions.
 
 ---
 
-## 🎓 Educational Purpose
+# ⚕️ Medical Disclaimer
 
-NutriGuard AI was developed as an educational Medical IT project to demonstrate how Artificial Intelligence, nutrition databases, and healthcare informatics can be combined into an interactive digital health application.
+NutriGuard AI provides educational nutritional insights only.
 
-This project forms part of my Medical IT portfolio for undergraduate studies.
+It is not a replacement for professional medical diagnosis, treatment, or advice.
+
+Users should consult healthcare professionals for medical decisions.
 
 ---
 
-## 👩‍💻 Author
+# 👩‍💻 Developer
 
 **Kashish**
 
-Medical IT & Healthcare AI Enthusiast
+AI & Healthcare Technology Enthusiast
 
-GitHub:
-https://github.com/kashish-alt0786
+Interested in:
 
----
-
-## 📄 License
-
-Released under the MIT License.
+- Artificial Intelligence
+- Machine Learning
+- Biomedical Informatics
+- Digital Healthcare Solutions
 
 ---
 
-## ⚕ Disclaimer
+# 📌 Version
 
-This application is intended solely for educational and informational purposes.
+Current Version:
 
-It is **not** a medical device and **must not** be used for diagnosis, treatment, insulin dosing, or medical decision-making. Users should consult qualified healthcare professionals for personalized medical advice.
+```
+v1.0.0
+```
+
+Last Updated:
+
+```
+July 2026
+```
+
+---
+
+# 🔗 Links
+
+💻 GitHub Repository:
+
+https://github.com/kashish-alt0786/NutriGuard-AI
+
+🌐 Live Demo:
+
+https://nutriguard-ai-rrzi6rnezvcba9dhtgzlrm.streamlit.app/
+
+---
+
+## 💙 NutriGuard AI
+
+Making nutrition smarter through  
+Artificial Intelligence and Healthcare Innovation.

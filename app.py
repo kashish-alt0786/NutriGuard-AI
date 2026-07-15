@@ -153,17 +153,17 @@ food_database = {
 "swap_reason":"Brown rice contains more fiber and produces a lower estimated glycemic impact."
 },
 
-"Brown Rice Bibimbap":{
-"food_name":"Brown Rice Bibimbap",
-"calories":520,FFF
-"carbs":60,
-"protein":18,
-"fat":14,
-"fiber":8,
-"gi":50,
-"gl":18,
-"healthy_swap":"Extra vegetables + tofu",
-"swap_reason":"Higher fiber may help slow glucose absorption."
+"Brown Rice Bibimbap": {
+    "food_name": "Brown Rice Bibimbap",
+    "calories": 520,
+    "carbs": 60,
+    "protein": 18,
+    "fat": 14,
+    "fiber": 8,
+    "gi": 50,
+    "gl": 18,
+    "healthy_swap": "Extra vegetables + tofu",
+    "swap_reason": "Higher fiber may help slow glucose absorption."
 },
 
 "Kimchi Fried Rice":{

@@ -1,153 +1,301 @@
 import streamlit as st
 import pandas as pd
+import plotly.express as px
 from PIL import Image
-import google.generativeai as genai
-import json
-import os
 from datetime import datetime
 
-# ----------------------------
+# -------------------------------------------------
 # PAGE CONFIG
-# ----------------------------
+# -------------------------------------------------
 
 st.set_page_config(
     page_title="NutriGuard AI",
     page_icon="🥗",
-    layout="wide"
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
 
-# ----------------------------
+# -------------------------------------------------
 # CUSTOM CSS
-# ----------------------------
+# -------------------------------------------------
 
 st.markdown("""
 <style>
 
-.main{
-    padding-top:20px;
+.main {
+    padding-top: 1rem;
+}
+
+.block-container {
+    padding-top: 2rem;
+    padding-bottom: 2rem;
+}
+
+.metric-card{
+    background:#F8F9FA;
+    padding:15px;
+    border-radius:12px;
+    border:1px solid #E0E0E0;
 }
 
 .title{
     text-align:center;
-    font-size:42px;
-    font-weight:bold;
     color:#2E8B57;
 }
 
-.subtitle{
-    text-align:center;
-    font-size:18px;
-    color:gray;
-}
-
-.result-box{
-    padding:15px;
-    border-radius:10px;
-    background:#F7F7F7;
-    margin-top:10px;
-}
-
-.low{
-    background:#D4EDDA;
-    padding:12px;
-    border-radius:8px;
-}
-
-.medium{
-    background:#FFF3CD;
-    padding:12px;
-    border-radius:8px;
-}
-
-.high{
-    background:#F8D7DA;
-    padding:12px;
-    border-radius:8px;
-}
-
 .footer{
-    font-size:13px;
+    text-align:center;
     color:gray;
+    font-size:13px;
 }
 
 </style>
 """, unsafe_allow_html=True)
 
-# ----------------------------
+# -------------------------------------------------
 # TITLE
-# ----------------------------
+# -------------------------------------------------
 
 st.markdown(
-    "<div class='title'>🥗 NutriGuard AI</div>",
+    "<h1 class='title'>🥗 NutriGuard AI</h1>",
     unsafe_allow_html=True
 )
 
 st.markdown(
-    "<div class='subtitle'>Educational Nutrition Analysis for Diabetes Management</div>",
-    unsafe_allow_html=True
+"""
+### Educational Nutrition Analysis for Diabetes Management
+
+Analyze everyday Indian and Korean meals to understand:
+
+- Carbohydrates
+- Protein
+- Fat
+- Fiber
+- Estimated Glycemic Index (GI)
+- Estimated Glycemic Load (GL)
+- Healthier meal alternatives
+
+**Educational Tool Only — Not Medical Advice**
+"""
 )
 
 st.divider()
 
-# ----------------------------
+# -------------------------------------------------
 # SIDEBAR
-# ----------------------------
+# -------------------------------------------------
 
-st.sidebar.title("Settings")
+with st.sidebar:
 
-language = st.sidebar.selectbox(
-    "Language",
-    [
-        "English",
-        "한국어"
-    ]
-)
+    st.header("⚙ Settings")
 
-show_history = st.sidebar.checkbox(
-    "Show Meal History",
-    value=True
-)
+    language = st.selectbox(
+        "Language",
+        [
+            "English",
+            "한국어 (Coming Soon)",
+            "हिन्दी (Coming Soon)"
+        ]
+    )
 
-# ----------------------------
-# GEMINI API
-# ----------------------------
+    st.divider()
 
-api_key = st.secrets["GEMINI_API_KEY"]
+    st.subheader("About")
 
-genai.configure(api_key=api_key)
+    st.write(
+        """
+NutriGuard AI is an educational Medical IT project
+designed to improve nutrition literacy for diabetes
+management.
 
-model = genai.GenerativeModel(
-    "gemini-2.5-flash"
-)
+Built using:
 
-# ----------------------------
-# LOAD DATABASE
-# ----------------------------
+- Python
+- Streamlit
+- Pandas
+- Plotly
+"""
+    )
 
-nutrition_df = pd.read_csv("nutrition_db.csv")
+    st.divider()
 
-# ----------------------------
+    st.info(
+        "Future Version:\n\n"
+        "• AI Food Recognition\n"
+        "• Barcode Scanner\n"
+        "• OCR Food Labels\n"
+        "• Larger Food Database"
+    )
+
+# -------------------------------------------------
 # SESSION STATE
-# ----------------------------
+# -------------------------------------------------
 
-if "history" not in st.session_state:
-    st.session_state.history = []
+if "meal_history" not in st.session_state:
+    st.session_state.meal_history = []
 
-# ----------------------------
+# -------------------------------------------------
+# FOOD DATABASE
+# -------------------------------------------------
+
+food_database = {
+
+"White Rice Bibimbap":{
+"food_name":"White Rice Bibimbap",
+"calories":530,
+"carbs":74,
+"protein":18,
+"fat":14,
+"fiber":4,
+"gi":73,
+"gl":35,
+"healthy_swap":"Brown Rice Bibimbap",
+"swap_reason":"Brown rice contains more fiber and produces a lower estimated glycemic impact."
+},
+
+"Brown Rice Bibimbap":{
+"food_name":"Brown Rice Bibimbap",
+"calories":520,
+"carbs":60,
+"protein":18,
+"fat":14,
+"fiber":8,
+"gi":50,
+"gl":18,
+"healthy_swap":"Extra vegetables + tofu",
+"swap_reason":"Higher fiber may help slow glucose absorption."
+},
+
+"Kimchi Fried Rice":{
+"food_name":"Kimchi Fried Rice",
+"calories":480,
+"carbs":68,
+"protein":15,
+"fat":14,
+"fiber":3,
+"gi":72,
+"gl":32,
+"healthy_swap":"Brown Rice Kimchi Bowl",
+"swap_reason":"Whole grains increase fiber while reducing estimated glycemic impact."
+},
+
+"Bulgogi":{
+"food_name":"Bulgogi",
+"calories":390,
+"carbs":18,
+"protein":28,
+"fat":19,
+"fiber":2,
+"gi":35,
+"gl":6,
+"healthy_swap":"Lean Bulgogi with Salad",
+"swap_reason":"More vegetables increase fiber."
+},
+
+"Kimchi":{
+"food_name":"Kimchi",
+"calories":25,
+"carbs":4,
+"protein":2,
+"fat":0,
+"fiber":2,
+"gi":15,
+"gl":1,
+"healthy_swap":"Current meal is already healthy",
+"swap_reason":"Fermented vegetables are naturally low in carbohydrates."
+},
+
+"Chapati":{
+"food_name":"Whole Wheat Chapati",
+"calories":120,
+"carbs":20,
+"protein":4,
+"fat":2,
+"fiber":3,
+"gi":52,
+"gl":10,
+"healthy_swap":"Current meal is already healthy",
+"swap_reason":"Whole wheat provides dietary fiber."
+},
+
+"Paratha":{
+"food_name":"Paratha",
+"calories":310,
+"carbs":40,
+"protein":6,
+"fat":13,
+"fiber":2,
+"gi":70,
+"gl":28,
+"healthy_swap":"Whole Wheat Chapati",
+"swap_reason":"Chapati generally contains less fat and lower glycemic impact."
+},
+
+"Rajma Chawal":{
+"food_name":"Rajma Chawal",
+"calories":520,
+"carbs":72,
+"protein":18,
+"fat":9,
+"fiber":12,
+"gi":58,
+"gl":20,
+"healthy_swap":"Brown Rice Rajma",
+"swap_reason":"Brown rice provides more fiber."
+},
+
+"Chana Masala":{
+"food_name":"Chana Masala",
+"calories":280,
+"carbs":36,
+"protein":14,
+"fat":7,
+"fiber":10,
+"gi":28,
+"gl":8,
+"healthy_swap":"Current meal is already healthy",
+"swap_reason":"High fiber legumes support slower carbohydrate absorption."
+},
+
+"Chole Bhature":{
+"food_name":"Chole Bhature",
+"calories":690,
+"carbs":82,
+"protein":18,
+"fat":28,
+"fiber":8,
+"gi":76,
+"gl":39,
+"healthy_swap":"Chana Masala + Chapati",
+"swap_reason":"Reduces refined flour and overall glycemic load."
+}
+
+}
+
+# -------------------------------------------------
+# HELPER FUNCTION
+# -------------------------------------------------
+
+def glycemic_level(gl):
+
+    if gl < 10:
+        return "Low"
+
+    elif gl < 20:
+        return "Moderate"
+
+    else:
+        return "High"
+        # -------------------------------------------------
 # IMAGE UPLOAD
-# ----------------------------
+# -------------------------------------------------
+
+st.header("📷 Upload Your Meal")
 
 uploaded_file = st.file_uploader(
-    "📷 Upload Meal Image",
-    type=[
-        "jpg",
-        "jpeg",
-        "png"
-    ]
+    "Choose an image of your meal",
+    type=["jpg", "jpeg", "png"]
 )
-# -------------------------------------------------------
-# AI FOOD RECOGNITION
-# -------------------------------------------------------
 
 if uploaded_file is not None:
 
@@ -159,200 +307,146 @@ if uploaded_file is not None:
         use_container_width=True
     )
 
-    st.divider()
+    st.success("Image uploaded successfully!")
 
-    with st.spinner("🔍 Analyzing your meal..."):
+    st.markdown("---")
 
-        prompt = """
-You are a nutrition analysis assistant.
+    st.subheader("🍽 Confirm Meal")
 
-Analyze this meal image.
+    st.subheader("🍽 Confirm Meal")
 
-Return ONLY valid JSON.
+st.info(
+    "🤖 Automatic food recognition will be added in a future version. "
+    "For this MVP, please confirm your meal from the list below."
+)
 
-{
-  "food_name":"",
-  "confidence":0,
-  "estimated_portion":"",
-  "carbs":0,
-  "protein":0,
-  "fat":0,
-  "fiber":0,
-  "calories":0,
-  "glycemic_index":0,
-  "glycemic_load":0,
-  "glycemic_impact":"",
-  "reason":"",
-  "healthy_swap":"",
-  "swap_reason":""
-}
+selected_food = st.selectbox(
+    "🔍 Search or select your meal",
+    sorted(food_database.keys()),
+    help="Type a few letters to quickly find your meal."
+)
 
-Rules:
+result = food_database[selected_food]
 
-- Respond ONLY JSON.
-- No markdown.
-- No explanations.
-- Confidence should be 0-100.
-- Glycemic Impact must be:
-Low
-Moderate
-High
+    result = food_database[selected_food]
 
-Food should be recognized even if it is Indian, Korean or international.
+    st.markdown("---")
 
-Nutrition values are approximate.
-"""
+    st.header("📊 Nutrition Analysis")
 
-        try:
+    col1, col2, col3 = st.columns(3)
 
-            response = model.generate_content(
-                [
-                    prompt,
-                    image
-                ]
-            )
+    with col1:
 
-            raw_text = response.text.strip()
+        st.metric(
+            "Calories",
+            f"{result['calories']} kcal"
+        )
 
-            if raw_text.startswith("```"):
-                raw_text = raw_text.replace("```json", "")
-                raw_text = raw_text.replace("```", "")
-                raw_text = raw_text.strip()
+        st.metric(
+            "Carbohydrates",
+            f"{result['carbs']} g"
+        )
 
-            result = json.loads(raw_text)
+    with col2:
 
-        except Exception as e:
+        st.metric(
+            "Protein",
+            f"{result['protein']} g"
+        )
 
-            st.error("❌ Unable to analyze this image.")
+        st.metric(
+            "Fat",
+            f"{result['fat']} g"
+        )
 
-            st.exception(e)
+    with col3:
 
-            st.stop()
-            st.success("✅ Meal recognized successfully")
+        st.metric(
+            "Fiber",
+            f"{result['fiber']} g"
+        )
+
+        st.metric(
+            "Estimated GI",
+            result["gi"]
+        )
+
+    st.markdown("---")
+
+    st.header("🩺 Glycemic Assessment")
+
+    impact = glycemic_level(result["gl"])
+
+    left, right = st.columns([1,1])
+
+    with left:
+
+        st.metric(
+            "Estimated Glycemic Load",
+            result["gl"]
+        )
+
+    with right:
+
+        if impact == "Low":
+
+            st.success("🟢 LOW Glycemic Impact")
+
+        elif impact == "Moderate":
+
+            st.warning("🟡 MODERATE Glycemic Impact")
+
+        else:
+
+            st.error("🔴 HIGH Glycemic Impact")
+
+    st.markdown("---")
+
+    st.header("💡 Why did the meal receive this rating?")
+
+    reasons = []
+
+    if result["carbs"] > 60:
+        reasons.append("High carbohydrate content")
+
+    if result["fiber"] < 5:
+        reasons.append("Low dietary fiber")
+
+    if result["gi"] > 70:
+        reasons.append("High Glycemic Index")
+
+    if result["fat"] > 20:
+        reasons.append("Higher fat content")
+
+    if len(reasons) == 0:
+        reasons.append(
+            "Balanced nutritional profile."
+        )
+
+    for reason in reasons:
+
+        st.write(f"✅ {reason}")
+        # -------------------------------------------------
+# HEALTHIER ALTERNATIVE
+# -------------------------------------------------
+
+st.divider()
+
+st.header("🥗 Healthier Alternative")
 
 col1, col2 = st.columns(2)
 
 with col1:
 
-    st.metric(
-        "🍽 Food",
-        result["food_name"]
-    )
+    st.subheader("Current Meal")
+
+    st.info(result["food_name"])
 
 with col2:
 
-    st.metric(
-        "🎯 Confidence",
-        f'{result["confidence"]}%'
-    )
+    st.subheader("Recommended Swap")
 
-st.write("Estimated Portion")
-
-st.info(result["estimated_portion"])
-if result["confidence"] < 60:
-
-    st.warning(
-        """
-The AI is not highly confident about this meal.
-
-Nutrition estimates may be inaccurate.
-Consider uploading a clearer image.
-"""
-    )
-    # -------------------------------------------------------
-# NUTRITION DASHBOARD
-# -------------------------------------------------------
-
-st.divider()
-
-st.subheader("📊 Nutrition Analysis")
-
-c1, c2, c3, c4, c5 = st.columns(5)
-
-c1.metric(
-    "Calories",
-    f"{result['calories']} kcal"
-)
-
-c2.metric(
-    "Carbs",
-    f"{result['carbs']} g"
-)
-
-c3.metric(
-    "Protein",
-    f"{result['protein']} g"
-)
-
-c4.metric(
-    "Fat",
-    f"{result['fat']} g"
-)
-
-c5.metric(
-    "Fiber",
-    f"{result['fiber']} g"
-)
-st.divider()
-
-st.subheader("🩺 Glycemic Assessment")
-
-g1, g2 = st.columns(2)
-
-with g1:
-
-    st.metric(
-        "Estimated Glycemic Index",
-        result["glycemic_index"]
-    )
-
-    st.metric(
-        "Estimated Glycemic Load",
-        result["glycemic_load"]
-    )
-
-with g2:
-
-    impact = result["glycemic_impact"]
-
-    if impact.lower() == "low":
-
-        st.success("🟢 LOW Glycemic Impact")
-
-    elif impact.lower() == "moderate":
-
-        st.warning("🟡 MODERATE Glycemic Impact")
-
-    else:
-
-        st.error("🔴 HIGH Glycemic Impact")
-        st.divider()
-
-st.subheader("💡 Why did the AI give this result?")
-
-st.info(result["reason"])
-st.markdown("""
-- High carbohydrate content
-- Refined grains
-- Low dietary fiber
-""")
-st.markdown("""
-- Rapid glucose absorption expected
-""")
-st.divider()
-
-st.subheader("🥗 Healthier Alternative")
-
-swap1, swap2 = st.columns(2)
-
-with swap1:
-
-    st.markdown("### Current Meal")
-
-    st.write(result["food_name"])
-
-with swap2:
-    st.markdown("### Recommended Swap")
     st.success(result["healthy_swap"])
 
 st.subheader("💡 Why is this healthier?")
@@ -369,37 +463,142 @@ for benefit in benefits:
 
 st.info(result["swap_reason"])
 
+# -------------------------------------------------
+# SAVE MEAL HISTORY
+# -------------------------------------------------
+
+st.divider()
+
+meal = {
+    "Time": datetime.now().strftime("%Y-%m-%d %H:%M"),
+    "Food": result["food_name"],
+    "Calories": result["calories"],
+    "Carbs": result["carbs"],
+    "GI": result["gi"],
+    "GL": result["gl"],
+    "Impact": impact
+}
+
+st.session_state.meal_history.append(meal)
+
+# -------------------------------------------------
+# MEAL HISTORY
+# -------------------------------------------------
+
+st.header("📋 Meal History")
+
+history = pd.DataFrame(st.session_state.meal_history)
+
+st.dataframe(
+    history,
+    use_container_width=True
+)
+
+# -------------------------------------------------
+# WEEKLY TREND
+# -------------------------------------------------
+
+st.subheader("📈 Glycemic Load Trend")
+
+fig = px.bar(
+    history,
+    x="Food",
+    y="GL",
+    color="Impact",
+    title="Meal Glycemic Load",
+)
+
+st.plotly_chart(
+    fig,
+    use_container_width=True
+)
+
+# -------------------------------------------------
+# EDUCATIONAL RESOURCES
+# -------------------------------------------------
+
+st.divider()
+
+st.header("📚 Learn More")
+
+st.markdown("""
+### Understanding Glycemic Index (GI)
+
+- Low GI: 55 or less
+- Medium GI: 56–69
+- High GI: 70+
+
+Foods with lower GI generally raise blood sugar more slowly.
+
+---
+
+### Understanding Glycemic Load (GL)
+
+GL combines:
+
+- Glycemic Index
+- Amount of carbohydrate
+
+This provides a better estimate of the meal's potential impact on blood glucose.
+
+---
+
+### Healthy Eating Tips
+
+✅ Choose whole grains
+
+✅ Eat more vegetables
+
+✅ Include legumes
+
+✅ Prefer high-fiber foods
+
+✅ Limit sugary drinks
+
+✅ Watch portion sizes
+""")
+
+# -------------------------------------------------
+# DISCLAIMER
+# -------------------------------------------------
+
 st.divider()
 
 st.warning("""
-⚠️ Educational Disclaimer
+### ⚠ Educational Disclaimer
 
-NutriGuard AI is an educational nutrition awareness tool.
+NutriGuard AI is intended **only for educational and nutrition awareness purposes**.
 
-Nutrition values, GI and GL are estimates based on publicly
-available food composition databases.
+• Nutrition values are estimated using publicly available food composition databases.
 
-This application does NOT diagnose diabetes,
-recommend treatment,
-or replace professional medical advice.
+• Food recognition and portion estimation are approximate.
 
-Always consult a qualified healthcare professional
-for diagnosis and medical decisions.
+• Glycemic Index (GI) and Glycemic Load (GL) are educational estimates.
+
+• This application does **not** diagnose diabetes or recommend treatment.
+
+• Always consult a qualified healthcare professional for medical advice.
 """)
-history_item = {
 
-    "Time": datetime.now().strftime("%Y-%m-%d %H:%M"),
+# -------------------------------------------------
+# FOOTER
+# -------------------------------------------------
 
-    "Meal": result["food_name"],
+st.divider()
 
-    "Calories": result["calories"],
+st.markdown(
+"""
+<div class="footer">
 
-    "GI": result["glycemic_index"],
+Developed by <b>Kashish</b>
 
-    "GL": result["glycemic_load"],
+Medical IT Portfolio Project
 
-    "Impact": result["glycemic_impact"]
+Python • Streamlit • Pandas • Plotly
 
-}
+Educational Nutrition Analysis for Diabetes Management
 
-st.session_state.history.append(history_item)
+</div>
+""",
+unsafe_allow_html=True
+)

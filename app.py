@@ -84,36 +84,6 @@ st.caption(t["subtitle"])
 
 st.divider()
 # ---------------------------------------------------
-# P1: MEAL IMAGE UPLOAD
-# ---------------------------------------------------
-
-st.header("📷 Upload Meal Image")
-
-uploaded_image = st.file_uploader(
-    "Upload a photo of your meal",
-    type=["jpg", "jpeg", "png"],
-    help="Upload a clear image of one meal for AI-based food recognition."
-)
-
-if uploaded_image is not None:
-
-    st.image(
-        uploaded_image,
-        caption="Uploaded Meal",
-        use_container_width=True
-    )
-
-    st.info(
-        "Image uploaded successfully. "
-        "AI food recognition will be added in the next step."
-    )
-
-st.divider()
-# ---------------------------------------------------
-# FOOD SEARCH
-# ---------------------------------------------------
-
-# ---------------------------------------------------
 # AI FOOD RECOGNITION
 # ---------------------------------------------------
 

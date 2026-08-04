@@ -156,58 +156,99 @@ if uploaded_image is not None:
 st.divider()
 
 # ---------------------------------------------------
-# MANUAL FOOD SELECTION — FALLBACK
-# ---------------------------------------------------
-
-st.header(f"🍽 {t['select_food']}")
-
-search = st.text_input(
-    "🔍 Search by food name",
-    placeholder="Example: Rajma, Bibimbap, Dosa..."
-)
-
-# ---------------------------------------------------
-# FILTER SEARCH
-# ---------------------------------------------------
-
-if search:
-
-    filtered_foods = foods[
-        foods["English"].str.contains(search, case=False, na=False)
-    ]
-
-else:
-
-    filtered_foods = foods
-
-# ---------------------------------------------------
 # FOOD SELECTION
 # ---------------------------------------------------
 
-food_names = filtered_foods["English"].tolist()
+# Confidence threshold for automatic recognition
+CONFIDENCE_THRESHOLD = 70.0
 
-if len(food_names) == 0:
-
-    st.warning("No matching food found.")
-
-    st.stop()
-
-selected_food = st.selectbox(
-
-    "🍛 Select Food",
-
-    food_names
-
+# Normalize database food names
+foods["food_key"] = (
+    foods["English"]
+    .astype(str)
+    .str.strip()
+    .str.lower()
 )
+
+# ---------------------------------------------------
+# AI RECOGNITION → DATABASE MATCH
+# ---------------------------------------------------
+
+ai_match = None
+
+if ai_food is not None:
+
+    ai_key = ai_food.strip().lower()
+
+    ai_match = foods[
+        foods["food_key"] == ai_key
+    ]
+
+    if ai_confidence >= CONFIDENCE_THRESHOLD:
+
+        if len(ai_match) > 0:
+
+            st.success(
+                f"✅ High-confidence match found: "
+                f"**{ai_food}**"
+            )
+
+            selected_food = ai_match.iloc[0]["English"]
+
+        else:
+
+            st.warning(
+                f"⚠️ **{ai_food}** was recognized with "
+                f"{ai_confidence:.2f}% confidence, but it "
+                "is not available in the NutriGuard nutrition database."
+            )
+
+            st.info(
+                "Please use the manual food search below."
+            )
+
+            selected_food = None
+
+    else:
+
+        st.warning(
+            f"⚠️ Recognition confidence is only "
+            f"{ai_confidence:.2f}%."
+        )
+
+        st.info(
+            "Manual verification is recommended. "
+            "Please select the food below."
+        )
+
+        selected_food = None
+
+# ---------------------------------------------------
+# MANUAL FOOD SELECTION FALLBACK
+# ---------------------------------------------------
+
+if selected_food is None:
+
+    food_names = filtered_foods["English"].tolist()
+
+    if len(food_names) == 0:
+
+        st.warning("No matching food found.")
+
+        st.stop()
+
+    selected_food = st.selectbox(
+        "🍛 Select Food",
+        food_names
+    )
 
 # ---------------------------------------------------
 # GET FOOD DATA
 # ---------------------------------------------------
 
-result = filtered_foods[
-    filtered_foods["English"] == selected_food
+result = foods[
+    foods["English"] == selected_food
 ].iloc[0]
-
 # ---------------------------------------------------
 # ANALYZE BUTTON
 # ---------------------------------------------------

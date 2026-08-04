@@ -174,6 +174,10 @@ foods["food_key"] = (
 # AI RECOGNITION → DATABASE MATCH
 # ---------------------------------------------------
 
+CONFIDENCE_THRESHOLD = 70.0
+
+# IMPORTANT: initialize before checking it
+selected_food = None
 ai_match = None
 
 if ai_food is not None:
@@ -189,8 +193,7 @@ if ai_food is not None:
         if len(ai_match) > 0:
 
             st.success(
-                f"✅ High-confidence match found: "
-                f"**{ai_food}**"
+                f"✅ High-confidence match found: **{ai_food}**"
             )
 
             selected_food = ai_match.iloc[0]["English"]
@@ -207,8 +210,6 @@ if ai_food is not None:
                 "Please use the manual food search below."
             )
 
-            selected_food = None
-
     else:
 
         st.warning(
@@ -221,8 +222,6 @@ if ai_food is not None:
             "Please select the food below."
         )
 
-        selected_food = None
-
 # ---------------------------------------------------
 # MANUAL FOOD SELECTION FALLBACK
 # ---------------------------------------------------
@@ -234,7 +233,6 @@ if selected_food is None:
     if len(food_names) == 0:
 
         st.warning("No matching food found.")
-
         st.stop()
 
     selected_food = st.selectbox(

@@ -1,7 +1,9 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+
 from translations import TEXT
+from food_recognition import recognize_food
 
 # ---------------------------------------------------
 # PAGE CONFIG
@@ -109,6 +111,82 @@ if uploaded_image is not None:
 st.divider()
 # ---------------------------------------------------
 # FOOD SEARCH
+# ---------------------------------------------------
+
+# ---------------------------------------------------
+# AI FOOD RECOGNITION
+# ---------------------------------------------------
+
+st.header("📷 AI Food Recognition")
+
+st.write(
+    "Upload a food image and NutriGuard AI will "
+    "attempt to identify the food automatically."
+)
+
+uploaded_image = st.file_uploader(
+    "Upload Meal Image",
+    type=["jpg", "jpeg", "png"],
+    help="For best results, upload a clear image containing one main food."
+)
+
+ai_food = None
+ai_confidence = None
+
+if uploaded_image is not None:
+
+    from PIL import Image
+
+    image = Image.open(uploaded_image).convert("RGB")
+
+    st.image(
+        image,
+        caption="Uploaded meal image",
+        use_container_width=True
+    )
+
+    with st.spinner("🤖 Analyzing food image..."):
+
+        recognition = recognize_food(
+            image,
+            top_k=5
+        )
+
+    ai_food = recognition["food"]
+    ai_confidence = recognition["confidence"]
+
+    st.success(
+        f"🍽️ Detected Food: **{ai_food}**"
+    )
+
+    st.metric(
+        "🎯 Model Confidence",
+        f"{ai_confidence:.2f}%"
+    )
+
+    with st.expander("🔎 View Top Predictions"):
+
+        for i, prediction in enumerate(
+            recognition["predictions"],
+            start=1
+        ):
+
+            label = (
+                prediction["label"]
+                .replace("_", " ")
+                .title()
+            )
+
+            score = prediction["score"] * 100
+
+            st.write(
+                f"{i}. **{label}** — {score:.2f}%"
+            )
+
+st.divider()
+
+# ---------------------------------------------------
+# MANUAL FOOD SELECTION — FALLBACK
 # ---------------------------------------------------
 
 st.header(f"🍽 {t['select_food']}")

@@ -169,7 +169,34 @@ foods["food_key"] = (
     .str.strip()
     .str.lower()
 )
+# ---------------------------------------------------
+# MANUAL FOOD SELECTION — FALLBACK
+# ---------------------------------------------------
 
+st.header(f"🍽 {t['select_food']}")
+
+search = st.text_input(
+    "🔍 Search by food name",
+    placeholder="Example: Rajma, Bibimbap, Dosa..."
+)
+
+# ---------------------------------------------------
+# FILTER SEARCH
+# ---------------------------------------------------
+
+if search:
+
+    filtered_foods = foods[
+        foods["English"].str.contains(
+            search,
+            case=False,
+            na=False
+        )
+    ]
+
+else:
+
+    filtered_foods = foods
 # ---------------------------------------------------
 # AI RECOGNITION → DATABASE MATCH
 # ---------------------------------------------------

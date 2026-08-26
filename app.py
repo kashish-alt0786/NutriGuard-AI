@@ -27,7 +27,6 @@ foods = pd.read_csv("foods.csv")
 # ---------------------------------------------------
 
 with st.sidebar:
-
     st.image(
         "https://img.icons8.com/color/96/salad.png",
         width=70
@@ -41,29 +40,18 @@ with st.sidebar:
     t = TEXT[language]
 
     st.divider()
-
     st.markdown("## 📂 Categories")
 
     category = st.selectbox(
-
         "",
-
         [
-
             "All",
-
             "Indian Home",
-
             "Indian Street",
-
             "Korean Home",
-
             "Korean Street",
-
             "International"
-
         ]
-
     )
 
 # ---------------------------------------------------
@@ -71,7 +59,6 @@ with st.sidebar:
 # ---------------------------------------------------
 
 if category != "All":
-
     foods = foods[foods["Category"] == category]
 
 # ---------------------------------------------------
@@ -79,10 +66,9 @@ if category != "All":
 # ---------------------------------------------------
 
 st.title(t["title"])
-
 st.caption(t["subtitle"])
-
 st.divider()
+
 # ---------------------------------------------------
 # AI FOOD RECOGNITION
 # ---------------------------------------------------
@@ -104,7 +90,6 @@ ai_food = None
 ai_confidence = None
 
 if uploaded_image is not None:
-
     from PIL import Image
 
     image = Image.open(uploaded_image).convert("RGB")
@@ -116,7 +101,6 @@ if uploaded_image is not None:
     )
 
     with st.spinner("🤖 Analyzing food image..."):
-
         recognition = recognize_food(
             image,
             top_k=5
@@ -135,12 +119,10 @@ if uploaded_image is not None:
     )
 
     with st.expander("🔎 View Top Predictions"):
-
         for i, prediction in enumerate(
             recognition["predictions"],
             start=1
         ):
-
             label = (
                 prediction["label"]
                 .replace("_", " ")
@@ -156,116 +138,54 @@ if uploaded_image is not None:
 st.divider()
 
 # ---------------------------------------------------
-# FOOD SELECTION
+# AI RECOGNITION → DATABASE MATCH
 # ---------------------------------------------------
 
-# Confidence threshold for automatic recognition
 CONFIDENCE_THRESHOLD = 70.0
 
-# Normalize database food names
 foods["food_key"] = (
     foods["English"]
     .astype(str)
     .str.strip()
     .str.lower()
 )
-# ---------------------------------------------------
-# MANUAL FOOD SELECTION — FALLBACK
-# ---------------------------------------------------
 
-st.header(f"🍽 {t['select_food']}")
-
-search = st.text_input(
-    "🔍 Search by food name",
-    placeholder="Example: Rajma, Bibimbap, Dosa..."
-)
-
-# ---------------------------------------------------
-# FILTER SEARCH
-# ---------------------------------------------------
-
-if search:
-
-    filtered_foods = foods[
-        foods["English"].str.contains(
-            search,
-            case=False,
-            na=False
-        )
-    ]
-
-else:
-
-    filtered_foods = foods
-# ---------------------------------------------------
-# AI RECOGNITION → DATABASE MATCH
-# ---------------------------------------------------
-
-CONFIDENCE_THRESHOLD = 70.0
-
-# IMPORTANT: initialize before checking it
 selected_food = None
 ai_match = None
 
 if ai_food is not None:
-
     ai_key = ai_food.strip().lower()
 
     ai_match = foods[
         foods["food_key"] == ai_key
     ]
 
-    if ai_confidence >= CONFIDENCE_THRESHOLD:
+    if ai_confidence >= CONFIDENCE_THRESHOLD and len(ai_match) > 0:
+        st.success(
+            f"✅ High-confidence match found: **{ai_food}**"
+        )
 
-        if len(ai_match) > 0:
+        selected_food = ai_match.iloc[0]["English"]
 
-            st.success(
-                f"✅ High-confidence match found: **{ai_food}**"
-            )
-
-            selected_food = ai_match.iloc[0]["English"]
-
-        else:
-
-            st.warning(
-                f"⚠️ **{ai_food}** was recognized with "
-                f"{ai_confidence:.2f}% confidence, but it "
-                "is not available in the NutriGuard nutrition database."
-            )
-
-            st.info(
-                "Please use the manual food search below."
-            )
+    elif ai_confidence >= CONFIDENCE_THRESHOLD:
+        st.warning(
+            f"⚠️ **{ai_food}** was recognized with "
+            f"{ai_confidence:.2f}% confidence, but it "
+            "is not available in the NutriGuard nutrition database."
+        )
 
     else:
-
         st.warning(
             f"⚠️ Recognition confidence is only "
-            f"{ai_confidence:.2f}%."
+            f"{ai_confidence:.2f}%. Please upload a clearer image."
         )
-
-        st.info(
-            "Manual verification is recommended. "
-            "Please select the food below."
-        )
-
-# ---------------------------------------------------
-# MANUAL FOOD SELECTION FALLBACK
-# ---------------------------------------------------
+else:
+    st.info(
+        "📷 Upload a meal image above to identify and analyze the food."
+    )
 
 if selected_food is None:
-
-    food_names = filtered_foods["English"].tolist()
-
-    if len(food_names) == 0:
-
-        st.warning("No matching food found.")
-        st.stop()
-
-    selected_food = st.selectbox(
-        "🍛 Select Food",
-        food_names
-    )
+    st.stop()
 
 # ---------------------------------------------------
 # GET FOOD DATA
@@ -274,6 +194,7 @@ if selected_food is None:
 result = foods[
     foods["English"] == selected_food
 ].iloc[0]
+
 # ---------------------------------------------------
 # ANALYZE BUTTON
 # ---------------------------------------------------
@@ -282,14 +203,13 @@ analyze = st.button(
     "📊 Analyze Meal",
     use_container_width=True
 )
+
 # ---------------------------------------------------
 # NUTRITION ANALYSIS
 # ---------------------------------------------------
 
 if analyze:
-
     st.divider()
-
     st.header(f"📊 {t['nutrition']}")
 
     col1, col2, col3 = st.columns(3)
@@ -338,46 +258,28 @@ if analyze:
     )
 
     st.divider()
+
     # ---------------------------------------------------
-# GLYCEMIC ASSESSMENT
-# ---------------------------------------------------
+    # GLYCEMIC ASSESSMENT
+    # ---------------------------------------------------
 
     st.header(f"🩺 {t['glycemic']}")
 
     gi = result["GI"]
     gl = result["GL"]
 
-    # Determine Glycemic Impact
-
     if gl <= 10:
-
         impact = "🟢 LOW"
-
         color = "green"
-
-        message = """
-This meal has a relatively low estimated glycemic impact.
-"""
-
+        message = "This meal has a relatively low estimated glycemic impact."
     elif gl <= 19:
-
         impact = "🟡 MODERATE"
-
         color = "orange"
-
-        message = """
-This meal has a moderate estimated glycemic impact.
-"""
-
+        message = "This meal has a moderate estimated glycemic impact."
     else:
-
         impact = "🔴 HIGH"
-
         color = "red"
-
-        message = """
-This meal has a high estimated glycemic impact.
-"""
+        message = "This meal has a high estimated glycemic impact."
 
     st.markdown(
         f"""
@@ -387,35 +289,28 @@ padding:18px;
 border-radius:12px;
 color:white;
 ">
-
 <h2>{impact} GLYCEMIC IMPACT</h2>
-
 <p>{message}</p>
-
 <b>Estimated GI:</b> {gi}<br>
-
 <b>Estimated GL:</b> {gl}
-
 </div>
 """,
         unsafe_allow_html=True
     )
 
     st.divider()
+
     # ---------------------------------------------------
-# HEALTHIER ALTERNATIVE
-# ---------------------------------------------------
+    # HEALTHIER ALTERNATIVE
+    # ---------------------------------------------------
 
     st.header("🥗 Healthier Alternative")
 
     current_col, swap_col = st.columns(2)
 
     with current_col:
-
         st.subheader("🍽 Current Meal")
-
         st.error(result["English"])
-
         st.write(f"🔥 Calories: {result['Calories']} kcal")
         st.write(f"🍞 Carbs: {result['Carbs']} g")
         st.write(f"🥦 Fiber: {result['Fiber']} g")
@@ -423,66 +318,39 @@ color:white;
         st.write(f"📉 GL: {result['GL']}")
 
     with swap_col:
-
         st.subheader("✅ Recommended Swap")
-
         st.success(result["HealthySwap"])
-
         st.info(result["Why"])
 
     st.markdown("---")
-
     st.subheader("📈 Expected Benefits")
 
     benefit1, benefit2 = st.columns(2)
 
     with benefit1:
-
         st.success("Higher dietary fiber")
-
         st.success("Lower estimated Glycemic Load")
-
         st.success("Slower glucose absorption")
 
     with benefit2:
-
         st.success("Better post-meal blood sugar response")
-
         st.success("Supports balanced nutrition")
-
         st.success("Educational recommendation only")
 
     st.markdown("---")
-
     st.subheader("💡 Why is this healthier?")
-
     st.info(result["Why"])
+
     # ---------------------------------------------------
-# MEAL HISTORY DASHBOARD
-# ---------------------------------------------------
+    # MEAL HISTORY DASHBOARD
+    # ---------------------------------------------------
 
     st.header("📈 Meal History Dashboard")
 
     history = pd.DataFrame({
-
-        "Day": [
-            "Mon",
-            "Tue",
-            "Wed",
-            "Thu",
-            "Fri",
-            "Sat",
-            "Sun"
-        ],
-
+        "Day": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
         "Glycemic Impact": [
-            "Low",
-            "Moderate",
-            "High",
-            "Low",
-            "Moderate",
-            "High",
-            "Low"
+            "Low", "Moderate", "High", "Low", "Moderate", "High", "Low"
         ]
     })
 
@@ -492,31 +360,19 @@ color:white;
         .reset_index()
     )
 
-    impact_count.columns = [
-        "Impact",
-        "Days"
-    ]
+    impact_count.columns = ["Impact", "Days"]
 
     fig = px.bar(
-
         impact_count,
-
         x="Impact",
-
         y="Days",
-
         text="Days",
-
         title="Weekly Glycemic Impact Summary"
-
     )
 
     fig.update_layout(
-
         xaxis_title="Impact Level",
-
         yaxis_title="Number of Days"
-
     )
 
     st.plotly_chart(
@@ -530,7 +386,8 @@ color:white;
     )
 
     st.divider()
-    # ---------------------------------------------------
+
+# ---------------------------------------------------
 # EDUCATIONAL RESOURCES
 # ---------------------------------------------------
 
@@ -572,7 +429,8 @@ with col2:
         "🇰🇷 Korean Nutrition Society",
         "https://www.kns.or.kr"
     )
-    # ---------------------------------------------------
+
+# ---------------------------------------------------
 # EDUCATIONAL DISCLAIMER
 # ---------------------------------------------------
 
@@ -628,104 +486,60 @@ medical care.
 """)
 
 st.divider()
+
 # =====================================================
 # PART 9: PROFESSIONAL PRODUCT FOOTER & BRANDING
 # NutriGuard AI v1.0.0
 # =====================================================
 
-import streamlit as st
-from datetime import datetime
-
-
-# Footer Divider
 st.markdown("---")
 
-
-# Developer Information Section
 st.markdown(
     """
     <div style="text-align:center;">
-
     <h2>💙 NutriGuard AI</h2>
-
-    <p>
-    AI-powered nutrition intelligence for
-    diabetes-aware eating
-    </p>
-
+    <p>AI-powered nutrition intelligence for diabetes-aware eating</p>
     <br>
-
     <h4>👩‍💻 Developed By</h4>
-
     <p>
     <b>Kashish</b><br>
     AI & Healthcare Technology Enthusiast<br>
     Biomedical Informatics | Machine Learning | Digital Healthcare
     </p>
-
     </div>
     """,
     unsafe_allow_html=True
 )
 
-
-# Version Information
 col1, col2, col3 = st.columns(3)
 
 with col1:
-    st.info(
-        """
-        🏷️ Version
-
-        v1.0.0
-        """
-    )
+    st.info("🏷️ Version\n\nv1.0.0")
 
 with col2:
-    st.info(
-        """
-        📅 Last Updated
-
-        July 2026
-        """
-    )
+    st.info("📅 Last Updated\n\nJuly 2026")
 
 with col3:
-    st.info(
-        """
-        🤖 Technology
-
-        AI + ML + Healthcare
-        """
-    )
-
+    st.info("🤖 Technology\n\nAI + ML + Healthcare")
 
 st.markdown("---")
-
-
-# GitHub + Demo Buttons
 
 st.markdown(
     """
     <div style="text-align:center;">
-
     <h4>Explore NutriGuard AI</h4>
-
     </div>
     """,
     unsafe_allow_html=True
 )
 
-
 button1, button2 = st.columns(2)
-
 
 with button1:
     st.link_button(
         "💻 GitHub Repository",
         "https://github.com/kashish-alt0786/NutriGuard-AI"
-    ) 
-
+    )
 
 with button2:
     st.link_button(
@@ -733,11 +547,7 @@ with button2:
         "https://nutriguard-ai-rrzi6rnezvcba9dhtgzlrm.streamlit.app/"
     )
 
-
 st.markdown("---")
-
-
-# Medical Disclaimer
 
 st.warning(
     """
@@ -751,24 +561,12 @@ st.warning(
     """
 )
 
-
-# Final Branding Message
-
 st.markdown(
     """
     <div style="text-align:center;">
-
     <h3>💙 NutriGuard AI</h3>
-
-    <p>
-    Making nutrition smarter through
-    Artificial Intelligence and Healthcare Innovation.
-    </p>
-
-    <p>
-    © 2026 NutriGuard AI
-    </p>
-
+    <p>Making nutrition smarter through Artificial Intelligence and Healthcare Innovation.</p>
+    <p>© 2026 NutriGuard AI</p>
     </div>
     """,
     unsafe_allow_html=True

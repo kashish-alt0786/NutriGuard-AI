@@ -1,11 +1,13 @@
-"""Risk-aware context utilities for NutriGuard AI."""
+"""Validated risk handoff and transparent nutrition context utilities."""
 
 
 def sanitize_risk(value, default=0.0):
-    """Return a safe risk percentage in the inclusive range 0-100."""
+    """Safely parse a risk percentage and require an inclusive 0-100 range."""
     try:
+        if isinstance(value, list):
+            value = value[0] if value else default
         risk = float(value)
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, IndexError):
         return float(default)
     if not 0.0 <= risk <= 100.0:
         return float(default)

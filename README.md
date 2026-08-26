@@ -1,115 +1,88 @@
 # 🥗 NutriGuard AI
 
-## AI-Based Diabetes-Aware Nutrition Assistant
+## Risk-Aware Educational Nutrition Assistant
 
-NutriGuard AI is an educational Streamlit application that connects food recognition with nutrition analysis and diabetes-aware meal guidance.
+NutriGuard AI is the nutrition companion to the **Explainable AI Diabetes Risk Prediction** project. It combines meal-image recognition, a nutrition database, glycemic-impact estimates and a validated diabetes-risk handoff to create a connected educational workflow.
 
-## 🌐 Live Demo
+## 🌐 Live Applications
 
-https://nutriguard-ai-rrzi6rnezvcba9dhtgzlrm.streamlit.app/
+- **Diabetes Risk Predictor:** https://medical-it-diabetes-ai-project-jkv5wwfmjmjugk5frfffut.streamlit.app/
+- **NutriGuard AI:** https://nutriguard-ai-rrzi6rnezvcba9dhtgzlrm.streamlit.app/
 
-## 🎯 What the current application does
+## 🔗 Connected Risk-to-Nutrition Workflow
 
-The current interface is intentionally centered on **meal-image upload**. It does not duplicate the previous manual food-selection workflow.
-
-The user flow is:
-
-**Upload meal image → AI food recognition → Nutrition analysis → Glycemic assessment → Healthier alternative → Educational resources**
-
-## ✨ Current Features
-
-### 📷 AI Food Recognition
-
-- Upload a JPG, JPEG or PNG meal image.
-- The recognition module returns a detected food label and confidence score.
-- The interface can show the top recognition candidates.
-- A confidence threshold is used before matching the detected food to the nutrition database.
-
-### 📊 Nutrition Analysis
-
-For a recognized database match, the app displays:
-
-- Calories
-- Carbohydrates
-- Protein
-- Fat
-- Fiber
-- Estimated Glycemic Index (GI)
-- Estimated Glycemic Load (GL)
-
-### 🩺 Glycemic Assessment
-
-The app classifies the estimated glycemic impact as **Low, Moderate or High** using the stored GL value and provides an educational explanation.
-
-### 🥗 Healthier Alternative
-
-The database can provide a recommended food swap, explain why it is suggested and summarize expected educational benefits such as higher fiber or lower estimated glycemic load.
-
-### 📈 Meal History Demonstration
-
-The application includes a weekly glycemic-impact visualization. The current history is explicitly a **demonstration feature**; it does not claim to persist a real patient's longitudinal record.
-
-### 🌐 Multilingual Interface
-
-The current application provides English and Korean language selection.
-
-### 📚 Educational Resources
-
-The app links users to trusted nutrition and health organizations, including USDA FoodData Central, WHO, ICMR–National Institute of Nutrition, the American Diabetes Association and Korean Nutrition Society.
-
-## 🏥 Clinical Design System
-
-The Streamlit theme uses a clean medical/clinical palette:
-
-- Primary slate blue: `#1E3A8A`
-- Secondary teal: `#0D9488`
-- Canvas: `#F8FAFC`
-- Surface: `#FFFFFF`
-- Functional status colors: green, amber and crimson
-- Sans-serif typography
-
-Theme configuration is stored in `.streamlit/config.toml`.
-
-## 🔄 Connection with the Diabetes AI Project
-
-NutriGuard AI is the nutrition companion to the diabetes-risk screening application:
-
-**Diabetes Risk Screening → Preferred Diet → Lifestyle → Manage Your Nutrition → NutriGuard AI**
-
-Diabetes AI application:
-https://medical-it-diabetes-ai-project-jkv5wwfmjmjugk5frfffut.streamlit.app/
-
-The two repositories are separate applications with a connected educational workflow.
-
-## 🏗️ Architecture
+The two applications are connected rather than isolated demos.
 
 ```mermaid
 flowchart LR
-    A[Meal Image Upload] --> B[AI Food Recognition]
-    B --> C[Confidence Check]
-    C --> D[Nutrition Database Match]
-    D --> E[Calories + Macros + Fiber]
-    D --> F[GI + GL Assessment]
-    D --> G[Healthier Alternative]
-    E --> H[Educational Guidance]
-    F --> H
-    G --> H
+    A[User Health Inputs] --> B[Diabetes ML Model]
+    B --> C[Risk Probability]
+    C --> D[Validated URL Handoff]
+    D --> E[NutriGuard Risk Profile]
+    E --> F[Meal Image / Manual Ingredients]
+    F --> G[Food Recognition]
+    G --> H[Nutrition Database]
+    H --> I[GI + GL + Macro Analysis]
+    E --> J[Risk-Aware Guidance Rules]
+    I --> J
+    J --> K[Educational Nutrition Guidance]
 ```
 
-## 🧰 Technology Stack
+The diabetes application sends its model output using a `risk` query parameter. NutriGuard treats this value as untrusted external input, validates it as a percentage between 0 and 100, and falls back safely when the value is invalid.
 
-- Python
-- Streamlit
-- Pandas
-- Plotly
-- Pillow
-- Food-recognition module
-- CSV-based nutrition database
+## 🛡️ Input Validation
 
-## 📂 Project Structure
+`src/risk_context.py` provides:
+
+- numeric conversion with error handling;
+- strict 0–100% range validation;
+- safe fallback for malformed or out-of-range values;
+- deterministic Low / Moderate / Elevated risk bands.
+
+This prevents malformed query strings from producing impossible risk states.
+
+## 🧠 Context-Aware Nutrition Logic
+
+| Risk profile | Educational emphasis |
+|---|---|
+| **Low (<30%)** | Balanced nutrition, vegetables, fiber and adequate protein |
+| **Moderate (30–59.9%)** | Fiber, portion balance, whole grains, vegetables and carbohydrate quality |
+| **Elevated (≥60%)** | Stronger emphasis on fiber-rich foods, vegetables, balanced portions and limiting sugary drinks/refined carbohydrates |
+
+The interface displays a **System Core / Logic Trace** so reviewers can see how the received risk affects the nutrition guidance.
+
+> **Engineering honesty:** the current repository does not contain an LLM-based medical dietitian. The context layer is deliberately implemented as deterministic rules rather than pretending that an LLM or clinical decision engine exists.
+
+## 📷 Meal Intelligence
+
+- Upload JPG, JPEG or PNG meal images.
+- Display detected food and recognition confidence.
+- Show top recognition candidates.
+- Apply a confidence threshold before matching the food to the nutrition database.
+- Allow manual ingredient context to supplement recognition.
+
+## 📊 Nutrition Analysis
+
+For a verified food match, NutriGuard displays calories, carbohydrates, protein, fat, fiber, estimated GI, estimated GL, an educational nutrition score, a healthier food swap and a balanced-plate visualization.
+
+GI/GL and nutrition scores are explicitly educational estimates because actual nutritional values vary with portion size, ingredients and preparation.
+
+## 🧪 Automated Tests
+
+`tests/test_risk_context.py` verifies valid risk values, malformed/out-of-range fallbacks, risk-band boundaries and risk-dependent nutrition context.
+
+```bash
+python -m pytest -q
+```
+
+## 🏗️ Architecture
 
 ```text
 NutriGuard-AI/
+├── src/
+│   └── risk_context.py
+├── tests/
+│   └── test_risk_context.py
 ├── app.py
 ├── food_recognition.py
 ├── foods.csv
@@ -123,26 +96,42 @@ NutriGuard-AI/
 └── README.md
 ```
 
+## 🎨 Clinical Design System
+
+- Slate blue: `#1E3A8A`
+- Teal: `#0D9488`
+- Off-white canvas: `#F8FAFC`
+- White content surfaces
+- Functional green / amber / crimson status colors
+- Sans-serif typography
+
+## 🔬 What Makes the Project Different
+
+**Risk estimation → secure data handoff → risk-aware nutrition context → meal recognition → nutrition analysis → educational guidance**
+
+This demonstrates how separate AI/data components can communicate while keeping their limitations explicit.
+
+## 🔐 Privacy and Medical Scope
+
+NutriGuard AI is an educational application. It does not diagnose diabetes, prescribe treatment or replace a doctor or registered dietitian.
+
+The risk handoff uses a URL query parameter for application-integration demonstration. The project does not claim to maintain a persistent electronic health record or clinical patient database.
+
+Food recognition, GI/GL values and nutrition estimates can vary with ingredients, preparation methods, portion size and image quality.
+
 ## 🚀 Run Locally
 
 ```bash
 git clone https://github.com/kashish-alt0786/NutriGuard-AI.git
 cd NutriGuard-AI
 python -m pip install -r requirements.txt
+python -m pytest -q
 streamlit run app.py
 ```
 
-## 🔐 Privacy and Medical Scope
-
-NutriGuard AI is an educational application. It does not diagnose diabetes, prescribe treatment or replace a doctor or registered dietitian.
-
-Food recognition, serving information, GI/GL values and nutrition estimates can vary with ingredients, preparation methods, portion size and image quality.
-
-The current application does not present itself as a persistent electronic health-record system.
-
 ## ⚠️ Medical Disclaimer
 
-NutriGuard AI provides educational nutritional insights only. It is not a replacement for professional medical diagnosis, treatment or advice. Users should consult qualified healthcare professionals for medical decisions.
+NutriGuard AI provides educational nutritional information only. It is not a replacement for professional medical diagnosis, treatment or advice. Users should consult qualified healthcare professionals for medical decisions.
 
 ## 👩‍💻 Developer
 
@@ -152,6 +141,6 @@ GitHub: https://github.com/kashish-alt0786/NutriGuard-AI
 
 ## 📌 Version
 
-`v1.0.0`
+`v1.1.0`
 
 © 2026 NutriGuard AI

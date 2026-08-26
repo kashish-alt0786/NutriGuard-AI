@@ -9,12 +9,9 @@ from src.risk_context import build_nutrition_context, sanitize_risk
 st.set_page_config(page_title="NutriGuard AI", page_icon="🥗", layout="wide")
 foods = pd.read_csv("foods.csv")
 
-# Small, permanent notice at the top; no large disclaimer footer.
 st.info("ℹ️ **Educational research tool:** NutriGuard AI provides general nutrition information and is not a medical diagnostic or treatment tool.")
 
-# ── Secure risk bridge ─────────────────────────────────────────────────────
-# The diabetes-risk project links here with ?risk=<model result>.
-# Query parameters are untrusted input and are strictly validated.
+# Secure risk bridge from the diabetes-risk predictor.
 query = st.query_params
 risk_from_predictor = None
 risk_source = None
@@ -29,13 +26,12 @@ if "risk" in query:
 
 with st.sidebar:
     st.markdown("## 🥗 NutriGuard AI")
-    language = st.selectbox("🌐 Language", ["English", "한국어"])
+    # English-only interface.
+    language = "English"
     t = TEXT[language]
     st.divider()
-    category = st.selectbox("📂 Food Category", ["All", "Indian Home", "Indian Street", "Korean Home", "Korean Street", "International"])
 
-if category != "All":
-    foods = foods[foods["Category"] == category]
+# All foods are available together; there is no separate food-category filter.
 
 st.title("🥗 NutriGuard AI")
 st.subheader("Risk-Aware Nutrition Intelligence")
@@ -51,10 +47,7 @@ if "risk_profile" not in st.session_state:
 if risk_from_predictor is not None:
     connected_label = "Low" if risk_from_predictor < 30 else "Moderate" if risk_from_predictor < 60 else "Elevated"
     source_text = " from the Diabetes Risk Predictor" if risk_source == "diabetes-risk-predictor" else " through the risk handoff"
-    st.info(
-        f"ℹ️ **Integration Active:** Successfully ingested a statistical model risk vector of "
-        f"**{risk_from_predictor:.1f}%**{source_text}."
-    )
+    st.info(f"ℹ️ **Integration Active:** Successfully ingested a statistical model risk vector of **{risk_from_predictor:.1f}%**{source_text}.")
     st.success(f"🔗 **Connected risk: {risk_from_predictor:.1f}% — {connected_label.upper()}**")
     st.caption("The received value is validated before it is used to tailor educational nutrition emphasis.")
     use_connected = st.radio("Use the connected result?", ["Yes — use my predictor result", "No — enter another estimate"], horizontal=True)
@@ -104,6 +97,7 @@ if uploaded_image is not None:
         for i, p in enumerate(recognition["predictions"], 1):
             st.write(f"{i}. **{p['label'].replace('_', ' ').title()}** — {p['score'] * 100:.2f}%")
 
+# Use the complete food database as one unified collection.
 foods["food_key"] = foods["English"].astype(str).str.strip().str.lower()
 selected_food = None
 if ai_food:

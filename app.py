@@ -120,8 +120,24 @@ if ai_confidence is not None and ai_confidence < 70:
 
 if manual_ingredients.strip():
     st.caption(f"✍️ Manual meal context: **{manual_ingredients}**")
-if selected_food is None and usda_food is None and not manual_ingredients.strip():
-    st.info("📷 Upload a meal or ✍️ enter ingredients to continue.")
+
+meal_context = manual_ingredients.strip() if manual_ingredients.strip() else (selected_food or ai_food or "")
+
+# ── Always-visible analysis trigger ─────────────────────────────────────────
+# The button is intentionally placed directly under the meal inputs so it is
+# visible without needing to scroll to the results section.
+if "analysis_requested" not in st.session_state:
+    st.session_state.analysis_requested = False
+
+st.markdown("### 🔍 Ready to Analyze?")
+st.caption("When you are ready, generate the nutrition analysis for the meal above.")
+
+if st.button("🔍 Generate Nutrition Analysis", type="primary", use_container_width=True):
+    if meal_context:
+        st.session_state.analysis_requested = True
+    else:
+        st.session_state.analysis_requested = False
+        st.warning("📷 Please upload a meal photo or ✍️ enter the ingredients before generating the analysis.")
 
 # ── Transparent system handshake ───────────────────────────────────────────
 st.divider()
@@ -129,25 +145,12 @@ st.subheader("🧠 NutriGuard Decision Context")
 st.info(f"ℹ️ **System Core:** {context['logic_trace']}")
 st.caption("This is an educational nutrition layer. It does not diagnose disease or predict an individual's post-meal glucose response.")
 
-meal_context = manual_ingredients.strip() if manual_ingredients.strip() else (selected_food or ai_food or "")
 context = build_nutrition_context(risk_percentage, meal_context)
 
-# ── Analysis trigger ────────────────────────────────────────────────────────
-if "analysis_requested" not in st.session_state:
-    st.session_state.analysis_requested = False
-
-st.markdown("## 🔍 Nutrition Analysis")
-st.caption("Review your meal only after you are ready to generate the nutrition analysis.")
-
-analysis_ready = bool(meal_context)
-if st.button("🔍 Generate Analysis", type="primary", use_container_width=True, disabled=not analysis_ready):
-    st.session_state.analysis_requested = True
-
-if not analysis_ready:
-    st.caption("Add a meal photo or enter ingredients above to enable **Generate Analysis**.")
-
 # ── Prominent nutrition analysis output ─────────────────────────────────────
+st.markdown("## 🍽️ Nutrition Analysis")
 if meal_context and st.session_state.analysis_requested:
+    st.caption("Nutrition analysis generated from the detected or entered meal.")
     with st.container(border=True):
         if selected_row is not None:
             n1, n2, n3, n4, n5 = st.columns(5)
@@ -187,8 +190,11 @@ if meal_context and st.session_state.analysis_requested:
 
         else:
             st.info("📝 Meal entered successfully, but a verified nutrition record is not available yet. Check the detected food or edit the ingredients to improve the match.")
+else:
+    st.info("👆 Enter or upload your meal, then click **🔍 Generate Nutrition Analysis** above.")
 
-    # ── Educational interpretation ─────────────────────────────────────────
+# ── Educational interpretation ─────────────────────────────────────────────
+if meal_context and st.session_state.analysis_requested:
     st.markdown("### 🎯 Educational Nutrition Focus")
     st.write(context["focus"])
 

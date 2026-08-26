@@ -1,27 +1,26 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-from urllib.parse import urlparse, parse_qs
+
 from translations import TEXT
 from food_recognition import recognize_food
+from src.risk_context import build_nutrition_context, sanitize_risk
 
 st.set_page_config(page_title="NutriGuard AI", page_icon="🥗", layout="wide")
 foods = pd.read_csv("foods.csv")
 
-# Small notice at the top; no large disclaimer footer.
+# Small, permanent notice at the top; no large disclaimer footer.
 st.info("ℹ️ **Educational research tool:** NutriGuard AI provides general nutrition information and is not a medical diagnostic or treatment tool.")
 
-# ── Risk bridge ─────────────────────────────────────────────────────────────
+# ── Secure risk bridge ─────────────────────────────────────────────────────
 # The diabetes-risk project links here with ?risk=<model result>.
+# Query parameters are treated as untrusted input and are strictly validated.
 query = st.query_params
 risk_from_predictor = None
-try:
-    if "risk" in query:
-        raw_risk = query.get("risk")
-        if raw_risk is not None:
-            risk_from_predictor = max(0.0, min(100.0, float(raw_risk)))
-except (TypeError, ValueError):
-    risk_from_predictor = None
+if "risk" in query:
+    risk_from_predictor = sanitize_risk(query.get("risk"), default=0.0)
+    if risk_from_predictor == 0.0 and str(query.get("risk")).strip() not in {"0", "0.0", "0.00"}:
+        st.warning("⚠️ The received risk value was invalid or outside 0–100%. A safe default of 0% was used.")
 
 with st.sidebar:
     st.markdown("## 🥗 NutriGuard AI")
@@ -41,33 +40,28 @@ st.caption("Understand your food. Make informed choices.")
 st.divider()
 st.header("🩺 1. My Risk Profile")
 
+if "risk_profile" not in st.session_state:
+    st.session_state.risk_profile = risk_from_predictor if risk_from_predictor is not None else 50.0
+
 if risk_from_predictor is not None:
-    risk_percentage = risk_from_predictor
-    if risk_percentage < 30:
-        risk_label, risk_icon = "LOW", "🟢"
-    elif risk_percentage < 60:
-        risk_label, risk_icon = "MODERATE", "🟡"
-    else:
-        risk_label, risk_icon = "ELEVATED", "🔴"
-    st.success(f"🔗 **Risk received from Diabetes Risk Predictor: {risk_percentage:.1f}% — {risk_label}**")
-    st.caption("Your actual model result was transferred automatically. You can still choose a different educational risk profile below.")
+    connected_label = "Low" if risk_from_predictor < 30 else "Moderate" if risk_from_predictor < 60 else "Elevated"
+    st.success(f"🔗 **Risk received from Diabetes Risk Predictor: {risk_from_predictor:.1f}% — {connected_label.upper()}**")
+    st.caption("The actual model result was transferred automatically through a validated URL parameter.")
     use_connected = st.radio("Use the connected result?", ["Yes — use my predictor result", "No — enter another estimate"], horizontal=True)
 else:
     use_connected = "No — enter another estimate"
 
 if risk_from_predictor is not None and use_connected.startswith("Yes"):
     risk_percentage = risk_from_predictor
+    st.session_state.risk_profile = risk_percentage
 else:
-    risk_percentage = st.slider("Estimated diabetes risk (%)", 0, 100, int(round(risk_from_predictor or 50)), 1)
+    risk_percentage = st.slider("Estimated diabetes risk (%)", 0, 100, int(round(st.session_state.risk_profile)), 1)
+    st.session_state.risk_profile = float(risk_percentage)
 
-if risk_percentage < 30:
-    risk_label, risk_icon = "LOW", "🟢"
-elif risk_percentage < 60:
-    risk_label, risk_icon = "MODERATE", "🟡"
-else:
-    risk_label, risk_icon = "ELEVATED", "🔴"
-
-st.metric("Estimated Risk Profile", f"{risk_percentage:.0f}%", risk_label)
+context = build_nutrition_context(risk_percentage)
+risk_label = context["label"].upper()
+risk_icon = "🟢" if risk_label == "LOW" else "🟡" if risk_label == "MODERATE" else "🔴"
+st.metric("Estimated Risk Profile", f"{risk_percentage:.0f}%", f"{risk_icon} {risk_label}")
 st.caption("The risk profile is used only to tailor educational nutrition emphasis; it is not a diagnosis.")
 
 # ── Module 2: meal input ────────────────────────────────────────────────────
@@ -124,16 +118,16 @@ if manual_ingredients.strip():
 if selected_food is None and not manual_ingredients.strip():
     st.info("📷 Upload a meal or ✍️ enter ingredients to continue.")
 
-# ── Module 3: food intelligence ────────────────────────────────────────────
+# ── Module 3: context-aware food intelligence ───────────────────────────────
 st.divider()
 st.header("🧠 3. Food Intelligence")
-if risk_percentage < 30:
-    mode = "General balanced nutrition education"
-elif risk_percentage < 60:
-    mode = "Higher emphasis on fiber, balanced portions, whole grains, vegetables, and limiting sugary drinks"
-else:
-    mode = "Elevated-risk educational guidance emphasizing fiber-rich foods, balanced portions, whole grains, vegetables, and limiting sugary drinks"
-st.info(f"🧠 **NutriGuard Decision Context**  \nRisk profile: **{risk_percentage:.0f}% — {risk_label}**  \nGuidance mode: **{mode}**")
+context = build_nutrition_context(risk_percentage, manual_ingredients)
+st.info(
+    f"ℹ️ **System Core: Risk-aware guidance activated**  \n"
+    f"Profile: **{context['risk']:.1f}% — {context['label']}**  \n"
+    f"Priority: **{context['priority']}**  \n"
+    f"Guidance rule: {context['focus']}"
+)
 
 analyze = st.button("📊 Generate Food Analysis", use_container_width=True, type="primary")
 if analyze:
@@ -143,7 +137,6 @@ if analyze:
         result = foods[foods["English"] == selected_food].iloc[0]
         st.subheader(f"🍽️ {result['English']}")
 
-        # Transparent educational scoring; not a medical score.
         fiber_score = min(float(result["Fiber"]) / 10 * 100, 100)
         protein_score = min(float(result["Protein"]) / 25 * 100, 100)
         carb_score = max(0, 100 - float(result["Carbs"]) / 80 * 100)
@@ -173,13 +166,9 @@ if analyze:
         plate = pd.DataFrame({"Component": ["Vegetables", "Fiber-rich carbohydrate", "Protein", "Healthy fat"], "Share": [40, 25, 25, 10]})
         st.plotly_chart(px.pie(plate, names="Component", values="Share", hole=.45, title="Example Balanced Plate"), use_container_width=True)
 
-        st.subheader("🔬 Why the Risk Profile Matters")
-        if risk_percentage >= 60:
-            st.warning("Because the supplied risk profile is elevated, NutriGuard places greater educational emphasis on fiber-rich foods, balanced portions, and limiting sugary drinks and highly refined carbohydrates.")
-        elif risk_percentage >= 30:
-            st.info("Because the supplied risk profile is moderate, NutriGuard emphasizes balanced meals, fiber, vegetables, and portion awareness.")
-        else:
-            st.success("The supplied risk profile is low; NutriGuard uses general balanced-nutrition guidance while still highlighting the meal's nutritional characteristics.")
+        st.subheader("🔬 Logic Trace")
+        st.code(context["logic_trace"], language="text")
+        st.write("The meal analysis is combined with the received risk profile to prioritize educational nutrition guidance. NutriGuard currently uses deterministic rules and its nutrition database; it does not claim to use an LLM for medical decision-making.")
 
         st.subheader("📈 Weekly Meal Impact — Demonstration")
         history = pd.DataFrame({"Day": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"], "Impact": ["Low", "Moderate", "High", "Low", "Moderate", "High", "Low"]})

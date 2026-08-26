@@ -5,10 +5,6 @@ import plotly.express as px
 from translations import TEXT
 from food_recognition import recognize_food
 
-# ---------------------------------------------------
-# PAGE CONFIG
-# ---------------------------------------------------
-
 st.set_page_config(
     page_title="NutriGuard AI",
     page_icon="🥗",
@@ -16,15 +12,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# ---------------------------------------------------
-# LOAD DATABASE
-# ---------------------------------------------------
-
 foods = pd.read_csv("foods.csv")
-
-# ---------------------------------------------------
-# SIDEBAR
-# ---------------------------------------------------
 
 with st.sidebar:
     st.image(
@@ -54,27 +42,14 @@ with st.sidebar:
         ]
     )
 
-# ---------------------------------------------------
-# FILTER DATA
-# ---------------------------------------------------
-
 if category != "All":
     foods = foods[foods["Category"] == category]
-
-# ---------------------------------------------------
-# PAGE TITLE
-# ---------------------------------------------------
 
 st.title(t["title"])
 st.caption(t["subtitle"])
 st.divider()
 
-# ---------------------------------------------------
-# AI FOOD RECOGNITION
-# ---------------------------------------------------
-
 st.header("📷 AI Food Recognition")
-
 st.write(
     "Upload a food image and NutriGuard AI will "
     "attempt to identify the food automatically."
@@ -88,6 +63,7 @@ uploaded_image = st.file_uploader(
 
 ai_food = None
 ai_confidence = None
+recognition = None
 
 if uploaded_image is not None:
     from PIL import Image
@@ -101,17 +77,12 @@ if uploaded_image is not None:
     )
 
     with st.spinner("🤖 Analyzing food image..."):
-        recognition = recognize_food(
-            image,
-            top_k=5
-        )
+        recognition = recognize_food(image, top_k=5)
 
     ai_food = recognition["food"]
     ai_confidence = recognition["confidence"]
 
-    st.success(
-        f"🍽️ Detected Food: **{ai_food}**"
-    )
+    st.success(f"🍽️ Detected Food: **{ai_food}**")
 
     st.metric(
         "🎯 Model Confidence",
@@ -128,18 +99,10 @@ if uploaded_image is not None:
                 .replace("_", " ")
                 .title()
             )
-
             score = prediction["score"] * 100
-
-            st.write(
-                f"{i}. **{label}** — {score:.2f}%"
-            )
+            st.write(f"{i}. **{label}** — {score:.2f}%")
 
 st.divider()
-
-# ---------------------------------------------------
-# AI RECOGNITION → DATABASE MATCH
-# ---------------------------------------------------
 
 CONFIDENCE_THRESHOLD = 70.0
 
@@ -156,15 +119,10 @@ ai_match = None
 if ai_food is not None:
     ai_key = ai_food.strip().lower()
 
-    ai_match = foods[
-        foods["food_key"] == ai_key
-    ]
+    ai_match = foods[foods["food_key"] == ai_key]
 
     if ai_confidence >= CONFIDENCE_THRESHOLD and len(ai_match) > 0:
-        st.success(
-            f"✅ High-confidence match found: **{ai_food}**"
-        )
-
+        st.success(f"✅ High-confidence match found: **{ai_food}**")
         selected_food = ai_match.iloc[0]["English"]
 
     elif ai_confidence >= CONFIDENCE_THRESHOLD:
@@ -179,217 +137,174 @@ if ai_food is not None:
             f"⚠️ Recognition confidence is only "
             f"{ai_confidence:.2f}%. Please upload a clearer image."
         )
+
+        # Do not stop the app here. Try the remaining top predictions
+        # against the nutrition database so the nutrition section can
+        # still be displayed when a low-confidence prediction is usable.
+        if recognition is not None:
+            for prediction in recognition["predictions"]:
+                candidate = (
+                    prediction["label"]
+                    .replace("_", " ")
+                    .strip()
+                    .lower()
+                )
+                candidate_match = foods[foods["food_key"] == candidate]
+                if len(candidate_match) > 0:
+                    selected_food = candidate_match.iloc[0]["English"]
+                    st.info(
+                        f"ℹ️ Nutrition analysis will use the best available "
+                        f"database match: **{selected_food}**. "
+                        "Because recognition confidence is low, verify the "
+                        "food before using these educational nutrition values."
+                    )
+                    break
 else:
-    st.info(
-        "📷 Upload a meal image above to identify and analyze the food."
-    )
+    st.info("📷 Upload a meal image above to identify and analyze the food.")
 
 if selected_food is None:
-    st.stop()
+    st.info(
+        "🥗 Nutrition analysis will appear here when a recognized food "
+        "matches an item in the NutriGuard nutrition database."
+    )
+else:
+    result = foods[foods["English"] == selected_food].iloc[0]
 
-# ---------------------------------------------------
-# GET FOOD DATA
-# ---------------------------------------------------
-
-result = foods[
-    foods["English"] == selected_food
-].iloc[0]
-
-# ---------------------------------------------------
-# ANALYZE BUTTON
-# ---------------------------------------------------
-
-analyze = st.button(
-    "📊 Analyze Meal",
-    use_container_width=True
-)
-
-# ---------------------------------------------------
-# NUTRITION ANALYSIS
-# ---------------------------------------------------
-
-if analyze:
-    st.divider()
-    st.header(f"📊 {t['nutrition']}")
-
-    col1, col2, col3 = st.columns(3)
-
-    with col1:
-        st.metric(
-            "🔥 Calories",
-            f"{result['Calories']} kcal"
-        )
-
-    with col2:
-        st.metric(
-            "🍞 Carbohydrates",
-            f"{result['Carbs']} g"
-        )
-
-    with col3:
-        st.metric(
-            "🥩 Protein",
-            f"{result['Protein']} g"
-        )
-
-    col4, col5, col6 = st.columns(3)
-
-    with col4:
-        st.metric(
-            "🥑 Fat",
-            f"{result['Fat']} g"
-        )
-
-    with col5:
-        st.metric(
-            "🥦 Fiber",
-            f"{result['Fiber']} g"
-        )
-
-    with col6:
-        st.metric(
-            "📈 Glycemic Index (GI)",
-            result["GI"]
-        )
-
-    st.metric(
-        "📉 Glycemic Load (GL)",
-        result["GL"]
+    analyze = st.button(
+        "📊 Analyze Meal",
+        use_container_width=True
     )
 
-    st.divider()
+    if analyze:
+        st.divider()
+        st.header(f"📊 {t['nutrition']}")
 
-    # ---------------------------------------------------
-    # GLYCEMIC ASSESSMENT
-    # ---------------------------------------------------
+        col1, col2, col3 = st.columns(3)
 
-    st.header(f"🩺 {t['glycemic']}")
+        with col1:
+            st.metric("🔥 Calories", f"{result['Calories']} kcal")
 
-    gi = result["GI"]
-    gl = result["GL"]
+        with col2:
+            st.metric("🍞 Carbohydrates", f"{result['Carbs']} g")
 
-    if gl <= 10:
-        impact = "🟢 LOW"
-        color = "green"
-        message = "This meal has a relatively low estimated glycemic impact."
-    elif gl <= 19:
-        impact = "🟡 MODERATE"
-        color = "orange"
-        message = "This meal has a moderate estimated glycemic impact."
-    else:
-        impact = "🔴 HIGH"
-        color = "red"
-        message = "This meal has a high estimated glycemic impact."
+        with col3:
+            st.metric("🥩 Protein", f"{result['Protein']} g")
 
-    st.markdown(
-        f"""
-<div style="
-background-color:{color};
-padding:18px;
-border-radius:12px;
-color:white;
-">
+        col4, col5, col6 = st.columns(3)
+
+        with col4:
+            st.metric("🥑 Fat", f"{result['Fat']} g")
+
+        with col5:
+            st.metric("🥦 Fiber", f"{result['Fiber']} g")
+
+        with col6:
+            st.metric("📈 Glycemic Index (GI)", result["GI"])
+
+        st.metric("📉 Glycemic Load (GL)", result["GL"])
+
+        st.divider()
+        st.header(f"🩺 {t['glycemic']}")
+
+        gi = result["GI"]
+        gl = result["GL"]
+
+        if gl <= 10:
+            impact = "🟢 LOW"
+            color = "green"
+            message = "This meal has a relatively low estimated glycemic impact."
+        elif gl <= 19:
+            impact = "🟡 MODERATE"
+            color = "orange"
+            message = "This meal has a moderate estimated glycemic impact."
+        else:
+            impact = "🔴 HIGH"
+            color = "red"
+            message = "This meal has a high estimated glycemic impact."
+
+        st.markdown(
+            f"""
+<div style="background-color:{color};padding:18px;border-radius:12px;color:white;">
 <h2>{impact} GLYCEMIC IMPACT</h2>
 <p>{message}</p>
 <b>Estimated GI:</b> {gi}<br>
 <b>Estimated GL:</b> {gl}
 </div>
 """,
-        unsafe_allow_html=True
-    )
+            unsafe_allow_html=True
+        )
 
-    st.divider()
+        st.divider()
+        st.header("🥗 Healthier Alternative")
 
-    # ---------------------------------------------------
-    # HEALTHIER ALTERNATIVE
-    # ---------------------------------------------------
+        current_col, swap_col = st.columns(2)
 
-    st.header("🥗 Healthier Alternative")
+        with current_col:
+            st.subheader("🍽 Current Meal")
+            st.error(result["English"])
+            st.write(f"🔥 Calories: {result['Calories']} kcal")
+            st.write(f"🍞 Carbs: {result['Carbs']} g")
+            st.write(f"🥦 Fiber: {result['Fiber']} g")
+            st.write(f"📈 GI: {result['GI']}")
+            st.write(f"📉 GL: {result['GL']}")
 
-    current_col, swap_col = st.columns(2)
+        with swap_col:
+            st.subheader("✅ Recommended Swap")
+            st.success(result["HealthySwap"])
+            st.info(result["Why"])
 
-    with current_col:
-        st.subheader("🍽 Current Meal")
-        st.error(result["English"])
-        st.write(f"🔥 Calories: {result['Calories']} kcal")
-        st.write(f"🍞 Carbs: {result['Carbs']} g")
-        st.write(f"🥦 Fiber: {result['Fiber']} g")
-        st.write(f"📈 GI: {result['GI']}")
-        st.write(f"📉 GL: {result['GL']}")
+        st.markdown("---")
+        st.subheader("📈 Expected Benefits")
 
-    with swap_col:
-        st.subheader("✅ Recommended Swap")
-        st.success(result["HealthySwap"])
+        benefit1, benefit2 = st.columns(2)
+
+        with benefit1:
+            st.success("Higher dietary fiber")
+            st.success("Lower estimated Glycemic Load")
+            st.success("Slower glucose absorption")
+
+        with benefit2:
+            st.success("Better post-meal blood sugar response")
+            st.success("Supports balanced nutrition")
+            st.success("Educational recommendation only")
+
+        st.markdown("---")
+        st.subheader("💡 Why is this healthier?")
         st.info(result["Why"])
 
-    st.markdown("---")
-    st.subheader("📈 Expected Benefits")
+        st.header("📈 Meal History Dashboard")
 
-    benefit1, benefit2 = st.columns(2)
+        history = pd.DataFrame({
+            "Day": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+            "Glycemic Impact": [
+                "Low", "Moderate", "High", "Low", "Moderate", "High", "Low"
+            ]
+        })
 
-    with benefit1:
-        st.success("Higher dietary fiber")
-        st.success("Lower estimated Glycemic Load")
-        st.success("Slower glucose absorption")
+        impact_count = history["Glycemic Impact"].value_counts().reset_index()
+        impact_count.columns = ["Impact", "Days"]
 
-    with benefit2:
-        st.success("Better post-meal blood sugar response")
-        st.success("Supports balanced nutrition")
-        st.success("Educational recommendation only")
+        fig = px.bar(
+            impact_count,
+            x="Impact",
+            y="Days",
+            text="Days",
+            title="Weekly Glycemic Impact Summary"
+        )
 
-    st.markdown("---")
-    st.subheader("💡 Why is this healthier?")
-    st.info(result["Why"])
+        fig.update_layout(
+            xaxis_title="Impact Level",
+            yaxis_title="Number of Days"
+        )
 
-    # ---------------------------------------------------
-    # MEAL HISTORY DASHBOARD
-    # ---------------------------------------------------
+        st.plotly_chart(fig, use_container_width=True)
 
-    st.header("📈 Meal History Dashboard")
+        st.info(
+            "Meal history is currently a demonstration feature. "
+            "Future versions will securely save user meals and trends."
+        )
 
-    history = pd.DataFrame({
-        "Day": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
-        "Glycemic Impact": [
-            "Low", "Moderate", "High", "Low", "Moderate", "High", "Low"
-        ]
-    })
-
-    impact_count = (
-        history["Glycemic Impact"]
-        .value_counts()
-        .reset_index()
-    )
-
-    impact_count.columns = ["Impact", "Days"]
-
-    fig = px.bar(
-        impact_count,
-        x="Impact",
-        y="Days",
-        text="Days",
-        title="Weekly Glycemic Impact Summary"
-    )
-
-    fig.update_layout(
-        xaxis_title="Impact Level",
-        yaxis_title="Number of Days"
-    )
-
-    st.plotly_chart(
-        fig,
-        use_container_width=True
-    )
-
-    st.info(
-        "Meal history is currently a demonstration feature. "
-        "Future versions will securely save user meals and trends."
-    )
-
-    st.divider()
-
-# ---------------------------------------------------
-# EDUCATIONAL RESOURCES
-# ---------------------------------------------------
+        st.divider()
 
 st.header("📚 Educational Resources")
 
@@ -404,35 +319,16 @@ information about nutrition, diabetes, and healthy eating.
 col1, col2 = st.columns(2)
 
 with col1:
-    st.link_button(
-        "🇺🇸 American Diabetes Association",
-        "https://diabetes.org"
-    )
-
-    st.link_button(
-        "🇺🇸 USDA FoodData Central",
-        "https://fdc.nal.usda.gov"
-    )
-
-    st.link_button(
-        "🌍 World Health Organization",
-        "https://www.who.int"
-    )
+    st.link_button("🇺🇸 American Diabetes Association", "https://diabetes.org")
+    st.link_button("🇺🇸 USDA FoodData Central", "https://fdc.nal.usda.gov")
+    st.link_button("🌍 World Health Organization", "https://www.who.int")
 
 with col2:
     st.link_button(
         "🇮🇳 ICMR – National Institute of Nutrition",
         "https://www.nin.res.in"
     )
-
-    st.link_button(
-        "🇰🇷 Korean Nutrition Society",
-        "https://www.kns.or.kr"
-    )
-
-# ---------------------------------------------------
-# EDUCATIONAL DISCLAIMER
-# ---------------------------------------------------
+    st.link_button("🇰🇷 Korean Nutrition Society", "https://www.kns.or.kr")
 
 st.header("⚠️ Educational Disclaimer")
 
@@ -486,11 +382,6 @@ medical care.
 """)
 
 st.divider()
-
-# =====================================================
-# PART 9: PROFESSIONAL PRODUCT FOOTER & BRANDING
-# NutriGuard AI v1.0.0
-# =====================================================
 
 st.markdown("---")
 

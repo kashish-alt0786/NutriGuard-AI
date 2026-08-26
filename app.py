@@ -132,35 +132,58 @@ st.caption("This is an educational nutrition layer. It does not diagnose disease
 meal_context = manual_ingredients.strip() if manual_ingredients.strip() else (selected_food or ai_food or "")
 context = build_nutrition_context(risk_percentage, meal_context)
 
+# ── Prominent nutrition analysis ────────────────────────────────────────────
+# Keep the core nutrition numbers immediately after the system handshake so
+# users and reviewers can see the analytical output without scrolling through
+# secondary guidance first.
+if meal_context:
+    st.markdown("## 🍽️ Nutrition Analysis")
+    st.caption("A compact nutrition snapshot of the detected or entered meal.")
+
+    with st.container(border=True):
+        if selected_row is not None:
+            n1, n2, n3, n4, n5 = st.columns(5)
+            calories = float(selected_row["Calories"])
+            carbs = float(selected_row["Carbs"])
+            protein = float(selected_row["Protein"])
+            fat = float(selected_row["Fat"])
+            n1.metric("Calories", f"{calories:.0f} kcal")
+            n2.metric("Carbohydrates", f"{carbs:.1f} g")
+            n3.metric("Protein", f"{protein:.1f} g")
+            n4.metric("Fat", f"{fat:.1f} g")
+
+            if "GI" in selected_row.index:
+                gi = float(selected_row["GI"])
+                gl = (gi * carbs) / 100.0
+                n5.metric("Estimated Glycemic Load", f"{gl:.1f}")
+                st.caption("GI/GL values are estimates from the project's nutrition database and should not be interpreted as individual glucose predictions.")
+            else:
+                n5.metric("Glycemic Load", "N/A")
+                st.caption("A glycemic-load estimate is not available for this food record.")
+
+            st.success(f"✓ Nutrition profile matched to **{selected_food}** in the local food database.")
+
+        elif usda_food is not None:
+            n1, n2, n3, n4, n5 = st.columns(5)
+            calories = usda_food.get("calories")
+            carbs = usda_food.get("carbs")
+            protein = usda_food.get("protein")
+            fat = usda_food.get("fat")
+            n1.metric("Calories", f"{float(calories):.0f} kcal" if calories is not None else "N/A")
+            n2.metric("Carbohydrates", f"{float(carbs):.1f} g" if carbs is not None else "N/A")
+            n3.metric("Protein", f"{float(protein):.1f} g" if protein is not None else "N/A")
+            n4.metric("Fat", f"{float(fat):.1f} g" if fat is not None else "N/A")
+            n5.metric("Glycemic Load", "N/A")
+            st.caption("Nutrition source: USDA FoodData Central. Values depend on the matched food record, portion and preparation; glycemic load is not calculated from this lookup.")
+            st.success(f"✓ Nutrition profile matched to **{usda_food['name']}** using the broader USDA fallback.")
+
+        else:
+            st.info("📝 Meal entered successfully, but a verified nutrition record is not available yet. Check the detected food or edit the ingredients to improve the match.")
+
+# ── Educational interpretation ─────────────────────────────────────────────
 if meal_context:
     st.markdown("### 🎯 Educational Nutrition Focus")
     st.write(context["focus"])
-
-    if selected_row is not None:
-        c1, c2, c3, c4 = st.columns(4)
-        c1.metric("Calories", f"{selected_row['Calories']} kcal")
-        c2.metric("Carbohydrates", f"{selected_row['Carbs']} g")
-        c3.metric("Protein", f"{selected_row['Protein']} g")
-        c4.metric("Fat", f"{selected_row['Fat']} g")
-
-        if "GI" in selected_row.index:
-            gi = float(selected_row["GI"])
-            carbs = float(selected_row["Carbs"])
-            gl = (gi * carbs) / 100.0
-            st.metric("Estimated Glycemic Load", f"{gl:.1f}")
-            st.caption("GI/GL values are estimates from the project's nutrition database and should not be interpreted as individual glucose predictions.")
-
-    elif usda_food is not None:
-        c1, c2, c3, c4 = st.columns(4)
-        calories = usda_food.get("calories")
-        carbs = usda_food.get("carbs")
-        protein = usda_food.get("protein")
-        fat = usda_food.get("fat")
-        c1.metric("Calories", f"{float(calories):.0f} kcal" if calories is not None else "N/A")
-        c2.metric("Carbohydrates", f"{float(carbs):.1f} g" if carbs is not None else "N/A")
-        c3.metric("Protein", f"{float(protein):.1f} g" if protein is not None else "N/A")
-        c4.metric("Fat", f"{float(fat):.1f} g" if fat is not None else "N/A")
-        st.caption("USDA values are database values for the matched food record; actual nutrition varies with recipe, portion and preparation.")
 
     if risk_label == "ELEVATED":
         st.warning("🔎 Elevated-profile review: pay particular attention to added sugars, highly refined carbohydrates, fiber and portion size.")

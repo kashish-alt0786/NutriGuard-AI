@@ -1,10 +1,10 @@
 import streamlit as st
 import pandas as pd
-import plotly.express as px
 
 from translations import TEXT
 from food_recognition import recognize_food
 from src.risk_context import build_nutrition_context, sanitize_risk
+from src.usda_nutrition import search_usda_food
 
 st.set_page_config(page_title="NutriGuard AI", page_icon="🥗", layout="wide")
 foods = pd.read_csv("foods.csv")
@@ -26,12 +26,9 @@ if "risk" in query:
 
 with st.sidebar:
     st.markdown("## 🥗 NutriGuard AI")
-    # English-only interface.
     language = "English"
     t = TEXT[language]
     st.divider()
-
-# All foods are available together; there is no separate food-category filter.
 
 st.title("🥗 NutriGuard AI")
 st.subheader("Risk-Aware Nutrition Intelligence")
@@ -70,7 +67,7 @@ st.caption("The risk profile is used only to tailor educational nutrition emphas
 # ── Module 2: meal input ────────────────────────────────────────────────────
 st.divider()
 st.header("🥗 2. My Meal")
-st.write("Upload a meal photo, enter ingredients manually, or use both. Manual input lets you correct or supplement AI recognition.")
+st.write("Upload a meal photo, enter ingredients manually, or use both. The app checks its local nutrition database first and can use USDA FoodData Central as a broader nutrition fallback.")
 
 image_col, manual_col = st.columns(2)
 with image_col:
@@ -83,6 +80,7 @@ with manual_col:
 ai_food = None
 ai_confidence = None
 recognition = None
+usda_food = None
 if uploaded_image is not None:
     from PIL import Image
     image = Image.open(uploaded_image).convert("RGB")
@@ -97,36 +95,39 @@ if uploaded_image is not None:
         for i, p in enumerate(recognition["predictions"], 1):
             st.write(f"{i}. **{p['label'].replace('_', ' ').title()}** — {p['score'] * 100:.2f}%")
 
-# Use the complete food database as one unified collection.
+# All foods are treated as one collection. Local data is preferred; USDA is a fallback.
 foods["food_key"] = foods["English"].astype(str).str.strip().str.lower()
 selected_food = None
+selected_row = None
+
 if ai_food:
     match = foods[foods["food_key"] == ai_food.strip().lower()]
-    if ai_confidence >= 70 and len(match):
+    if len(match):
         selected_food = match.iloc[0]["English"]
-    elif ai_confidence < 70:
-        st.warning(f"⚠️ Recognition confidence is {ai_confidence:.2f}%. Please verify the result or use the manual field.")
-        if recognition:
-            for p in recognition["predictions"]:
-                candidate = p["label"].replace("_", " ").strip().lower()
-                m = foods[foods["food_key"] == candidate]
-                if len(m):
-                    selected_food = m.iloc[0]["English"]
-                    st.info(f"Best available database match: **{selected_food}**. Please verify it.")
-                    break
+        selected_row = match.iloc[0]
     else:
-        st.warning(f"⚠️ **{ai_food}** was recognized, but it is not available in the nutrition database.")
+        # Broader nutrition lookup for foods outside the project's local CSV.
+        with st.spinner("🌎 Looking for broader nutrition data..."):
+            usda_food = search_usda_food(ai_food)
+        if usda_food:
+            st.success(f"🌎 Nutrition match found: **{usda_food['name']}**")
+            st.caption("Nutrition source: USDA FoodData Central.")
+        else:
+            st.warning("⚠️ The image model recognized a food that is not yet matched to the local database or available USDA lookup. Please verify or enter the food name manually.")
+
+if ai_confidence is not None and ai_confidence < 70:
+    st.warning(f"⚠️ Image recognition confidence is {ai_confidence:.2f}%. Please verify the detected food before using the nutrition information.")
 
 if manual_ingredients.strip():
     st.caption(f"✍️ Manual meal context: **{manual_ingredients}**")
-if selected_food is None and not manual_ingredients.strip():
+if selected_food is None and usda_food is None and not manual_ingredients.strip():
     st.info("📷 Upload a meal or ✍️ enter ingredients to continue.")
 
 # ── Transparent system handshake ───────────────────────────────────────────
 st.divider()
 st.subheader("🧠 NutriGuard Decision Context")
 st.info(f"ℹ️ **System Core:** {context['logic_trace']}")
-st.caption("This is a deterministic research rule layer. It does not claim to diagnose disease or predict an individual post-meal glucose response.")
+st.caption("This is an educational nutrition layer. It does not diagnose disease or predict an individual's post-meal glucose response.")
 
 meal_context = manual_ingredients.strip() if manual_ingredients.strip() else (selected_food or ai_food or "")
 context = build_nutrition_context(risk_percentage, meal_context)
@@ -135,29 +136,38 @@ if meal_context:
     st.markdown("### 🎯 Educational Nutrition Focus")
     st.write(context["focus"])
 
-    if selected_food:
-        selected_row = foods[foods["English"] == selected_food]
-        if not selected_row.empty:
-            row = selected_row.iloc[0]
-            c1, c2, c3, c4 = st.columns(4)
-            c1.metric("Calories", f"{row['Calories']} kcal")
-            c2.metric("Carbohydrates", f"{row['Carbs']} g")
-            c3.metric("Protein", f"{row['Protein']} g")
-            c4.metric("Fat", f"{row['Fat']} g")
+    if selected_row is not None:
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("Calories", f"{selected_row['Calories']} kcal")
+        c2.metric("Carbohydrates", f"{selected_row['Carbs']} g")
+        c3.metric("Protein", f"{selected_row['Protein']} g")
+        c4.metric("Fat", f"{selected_row['Fat']} g")
 
-            if "GI" in row.index:
-                gi = float(row["GI"])
-                carbs = float(row["Carbs"])
-                gl = (gi * carbs) / 100.0
-                st.metric("Estimated Glycemic Load", f"{gl:.1f}")
-                st.caption("GI/GL values are estimates from the project's nutrition database and should not be interpreted as individual glucose predictions.")
+        if "GI" in selected_row.index:
+            gi = float(selected_row["GI"])
+            carbs = float(selected_row["Carbs"])
+            gl = (gi * carbs) / 100.0
+            st.metric("Estimated Glycemic Load", f"{gl:.1f}")
+            st.caption("GI/GL values are estimates from the project's nutrition database and should not be interpreted as individual glucose predictions.")
 
-            if risk_label == "ELEVATED":
-                st.warning("🔎 Elevated-profile review: pay particular attention to added sugars, highly refined carbohydrates and portion size in this meal.")
-            elif risk_label == "MODERATE":
-                st.info("🔎 Moderate-profile review: consider fiber, protein, portion balance and carbohydrate quality when evaluating this meal.")
-            else:
-                st.success("🔎 Baseline review: focus on a balanced meal containing vegetables, fiber and adequate protein.")
+    elif usda_food is not None:
+        c1, c2, c3, c4 = st.columns(4)
+        calories = usda_food.get("calories")
+        carbs = usda_food.get("carbs")
+        protein = usda_food.get("protein")
+        fat = usda_food.get("fat")
+        c1.metric("Calories", f"{float(calories):.0f} kcal" if calories is not None else "N/A")
+        c2.metric("Carbohydrates", f"{float(carbs):.1f} g" if carbs is not None else "N/A")
+        c3.metric("Protein", f"{float(protein):.1f} g" if protein is not None else "N/A")
+        c4.metric("Fat", f"{float(fat):.1f} g" if fat is not None else "N/A")
+        st.caption("USDA values are database values for the matched food record; actual nutrition varies with recipe, portion and preparation.")
+
+    if risk_label == "ELEVATED":
+        st.warning("🔎 Elevated-profile review: pay particular attention to added sugars, highly refined carbohydrates, fiber and portion size.")
+    elif risk_label == "MODERATE":
+        st.info("🔎 Moderate-profile review: consider fiber, protein, portion balance and carbohydrate quality when evaluating this meal.")
+    else:
+        st.success("🔎 Baseline review: focus on a balanced meal containing vegetables, fiber and adequate protein.")
 
 st.markdown("---")
 st.subheader("📌 About the Risk Handoff")

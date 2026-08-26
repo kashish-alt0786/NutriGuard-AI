@@ -132,14 +132,22 @@ st.caption("This is an educational nutrition layer. It does not diagnose disease
 meal_context = manual_ingredients.strip() if manual_ingredients.strip() else (selected_food or ai_food or "")
 context = build_nutrition_context(risk_percentage, meal_context)
 
-# ── Prominent nutrition analysis ────────────────────────────────────────────
-# Keep the core nutrition numbers immediately after the system handshake so
-# users and reviewers can see the analytical output without scrolling through
-# secondary guidance first.
-if meal_context:
-    st.markdown("## 🍽️ Nutrition Analysis")
-    st.caption("A compact nutrition snapshot of the detected or entered meal.")
+# ── Analysis trigger ────────────────────────────────────────────────────────
+if "analysis_requested" not in st.session_state:
+    st.session_state.analysis_requested = False
 
+st.markdown("## 🔍 Nutrition Analysis")
+st.caption("Review your meal only after you are ready to generate the nutrition analysis.")
+
+analysis_ready = bool(meal_context)
+if st.button("🔍 Generate Analysis", type="primary", use_container_width=True, disabled=not analysis_ready):
+    st.session_state.analysis_requested = True
+
+if not analysis_ready:
+    st.caption("Add a meal photo or enter ingredients above to enable **Generate Analysis**.")
+
+# ── Prominent nutrition analysis output ─────────────────────────────────────
+if meal_context and st.session_state.analysis_requested:
     with st.container(border=True):
         if selected_row is not None:
             n1, n2, n3, n4, n5 = st.columns(5)
@@ -180,8 +188,7 @@ if meal_context:
         else:
             st.info("📝 Meal entered successfully, but a verified nutrition record is not available yet. Check the detected food or edit the ingredients to improve the match.")
 
-# ── Educational interpretation ─────────────────────────────────────────────
-if meal_context:
+    # ── Educational interpretation ─────────────────────────────────────────
     st.markdown("### 🎯 Educational Nutrition Focus")
     st.write(context["focus"])
 

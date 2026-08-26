@@ -1,252 +1,157 @@
-# 💙 NutriGuard AI
+# 🥗 NutriGuard AI
 
-## AI-Based Diabetes Nutrition Assistant
+## AI-Based Diabetes-Aware Nutrition Assistant
 
-![Python](https://img.shields.io/badge/Python-3.9+-blue)
-![Streamlit](https://img.shields.io/badge/Streamlit-App-red)
-![Machine Learning](https://img.shields.io/badge/AI-Machine%20Learning-green)
-![Healthcare AI](https://img.shields.io/badge/Healthcare-AI-purple)
-
----
+NutriGuard AI is an educational Streamlit application that connects food recognition with nutrition analysis and diabetes-aware meal guidance.
 
 ## 🌐 Live Demo
 
-🚀 Try NutriGuard AI:
-
 https://nutriguard-ai-rrzi6rnezvcba9dhtgzlrm.streamlit.app/
 
----
+## 🎯 What the current application does
 
-## 📌 Overview
+The current interface is intentionally centered on **meal-image upload**. It does not duplicate the previous manual food-selection workflow.
 
-**NutriGuard AI** is an AI-based nutrition assistant designed to help users understand their food choices and make diabetes-aware decisions.
+The user flow is:
 
-The project explores the use of **Artificial Intelligence, Machine Learning, nutrition analysis, and healthcare informatics** to provide nutritional insights and personalized suggestions.
+**Upload meal image → AI food recognition → Nutrition analysis → Glycemic assessment → Healthier alternative → Educational resources**
 
-The goal of this project is to explore how AI can support preventive healthcare through better nutrition awareness.
+## ✨ Current Features
 
----
+### 📷 AI Food Recognition
 
-# ✨ Key Features
+- Upload a JPG, JPEG or PNG meal image.
+- The recognition module returns a detected food label and confidence score.
+- The interface can show the top recognition candidates.
+- A confidence threshold is used before matching the detected food to the nutrition database.
 
-## 🍽️ Food Nutrition Analysis
+### 📊 Nutrition Analysis
 
-The application provides nutritional information about food items and meals:
+For a recognized database match, the app displays:
 
 - Calories
 - Carbohydrates
 - Protein
 - Fat
 - Fiber
+- Estimated Glycemic Index (GI)
+- Estimated Glycemic Load (GL)
 
----
+### 🩺 Glycemic Assessment
 
-## 🩺 Diabetes-Aware Insights
+The app classifies the estimated glycemic impact as **Low, Moderate or High** using the stored GL value and provides an educational explanation.
 
-NutriGuard AI provides food-related insights by considering:
+### 🥗 Healthier Alternative
 
-- Carbohydrate content
-- Glycemic impact estimation
-- Healthier food alternatives
-- Balanced meal suggestions
+The database can provide a recommended food swap, explain why it is suggested and summarize expected educational benefits such as higher fiber or lower estimated glycemic load.
 
----
+### 📈 Meal History Demonstration
 
-## 🤖 Artificial Intelligence Integration
+The application includes a weekly glycemic-impact visualization. The current history is explicitly a **demonstration feature**; it does not claim to persist a real patient's longitudinal record.
 
-NutriGuard AI applies AI and machine learning concepts for:
+### 🌐 Multilingual Interface
 
-- Food information analysis
-- Nutrition insights
-- Personalized suggestions
-- Health-focused recommendations
+The current application provides English and Korean language selection.
 
----
+### 📚 Educational Resources
 
-## 🔍 Explainable AI Approach
+The app links users to trusted nutrition and health organizations, including USDA FoodData Central, WHO, ICMR–National Institute of Nutrition, the American Diabetes Association and Korean Nutrition Society.
 
-The project focuses on making AI-based suggestions easier to understand by explaining:
+## 🏥 Clinical Design System
 
-- Why a food choice may be beneficial
-- Possible nutritional concerns
-- Factors influencing recommendations
+The Streamlit theme uses a clean medical/clinical palette:
 
-Explainability is important in healthcare AI because users should understand how AI-generated suggestions are formed.
+- Primary slate blue: `#1E3A8A`
+- Secondary teal: `#0D9488`
+- Canvas: `#F8FAFC`
+- Surface: `#FFFFFF`
+- Functional status colors: green, amber and crimson
+- Sans-serif typography
 
----
+Theme configuration is stored in `.streamlit/config.toml`.
 
-# 🏗️ System Architecture
+## 🔄 Connection with the Diabetes AI Project
 
+NutriGuard AI is the nutrition companion to the diabetes-risk screening application:
+
+**Diabetes Risk Screening → Preferred Diet → Lifestyle → Manage Your Nutrition → NutriGuard AI**
+
+Diabetes AI application:
+https://medical-it-diabetes-ai-project-jkv5wwfmjmjugk5frfffut.streamlit.app/
+
+The two repositories are separate applications with a connected educational workflow.
+
+## 🏗️ Architecture
+
+```mermaid
+flowchart LR
+    A[Meal Image Upload] --> B[AI Food Recognition]
+    B --> C[Confidence Check]
+    C --> D[Nutrition Database Match]
+    D --> E[Calories + Macros + Fiber]
+    D --> F[GI + GL Assessment]
+    D --> G[Healthier Alternative]
+    E --> H[Educational Guidance]
+    F --> H
+    G --> H
 ```
-User Food Input
-        |
-        ↓
-Food Information Processing
-        |
-        ↓
-Nutrition Analysis
-        |
-        ↓
-Diabetes-Aware Recommendation System
-        |
-        ↓
-Explainable Health Insights
-```
 
----
-
-# 🛠️ Technology Stack
-
-## Programming
+## 🧰 Technology Stack
 
 - Python
-
-## Application Framework
-
 - Streamlit
-
-## Machine Learning
-
-- Scikit-learn
-- Machine Learning Techniques
-
-## Data Processing
-
 - Pandas
-- NumPy
+- Plotly
+- Pillow
+- Food-recognition module
+- CSV-based nutrition database
 
-## Healthcare AI Concepts
+## 📂 Project Structure
 
-- Digital Health
-- Personalized Nutrition
-- Explainable AI
-
----
-
-# 📂 Project Structure
-
-```
+```text
 NutriGuard-AI/
-
-│
 ├── app.py
+├── food_recognition.py
+├── foods.csv
+├── translations.py
 ├── requirements.txt
-├── README.md
-│
-├── models/
-│
-├── data/
-│
-└── assets/
+├── .streamlit/
+│   └── config.toml
+├── assets/
+├── docs/
+├── screenshots/
+└── README.md
 ```
 
----
-
-# 🚀 Installation
-
-Clone the repository:
+## 🚀 Run Locally
 
 ```bash
 git clone https://github.com/kashish-alt0786/NutriGuard-AI.git
-```
-
-Move into the project folder:
-
-```bash
 cd NutriGuard-AI
-```
-
-Install dependencies:
-
-```bash
-pip install -r requirements.txt
-```
-
-Run the application:
-
-```bash
+python -m pip install -r requirements.txt
 streamlit run app.py
 ```
 
----
+## 🔐 Privacy and Medical Scope
 
-# 📊 Healthcare Application
+NutriGuard AI is an educational application. It does not diagnose diabetes, prescribe treatment or replace a doctor or registered dietitian.
 
-NutriGuard AI explores the connection between:
+Food recognition, serving information, GI/GL values and nutrition estimates can vary with ingredients, preparation methods, portion size and image quality.
 
-- Artificial Intelligence
-- Biomedical Informatics
-- Nutrition Science
-- Preventive Healthcare
+The current application does not present itself as a persistent electronic health-record system.
 
-This project demonstrates how AI can assist users in understanding nutrition information and making more informed food choices.
+## ⚠️ Medical Disclaimer
 
----
+NutriGuard AI provides educational nutritional insights only. It is not a replacement for professional medical diagnosis, treatment or advice. Users should consult qualified healthcare professionals for medical decisions.
 
-# 🔮 Future Improvements
+## 👩‍💻 Developer
 
-Possible future improvements include:
+**Kashish** — AI & Healthcare Technology Enthusiast
 
-- AI-based food image recognition
-- Larger food nutrition database
-- More personalized recommendations
-- Integration with health tracking data
+GitHub: https://github.com/kashish-alt0786/NutriGuard-AI
 
----
+## 📌 Version
 
-# ⚕️ Medical Disclaimer
+`v1.0.0`
 
-NutriGuard AI provides educational nutritional insights only.
-
-It is not a replacement for professional medical diagnosis, treatment, or advice.
-
-Users should consult healthcare professionals for medical decisions.
-
----
-
-# 👩‍💻 Developer
-
-**Kashish**
-
-High School Student | AI & Healthcare Technology Enthusiast
-Interested in:
-
-- Artificial Intelligence
-- Machine Learning
-- Biomedical Informatics
-- Digital Healthcare Solutions
-
----
-
-# 📌 Version
-
-Current Version:
-
-```
-v1.0.0
-```
-
-Last Updated:
-
-```
-July 2026
-```
-
----
-
-# 🔗 Links
-
-💻 GitHub Repository:
-
-https://github.com/kashish-alt0786/NutriGuard-AI
-
-🌐 Live Demo:
-
-https://nutriguard-ai-rrzi6rnezvcba9dhtgzlrm.streamlit.app/
-
----
-
-## 💙 NutriGuard AI
-
-Exploring the possibilities of Artificial Intelligence  
-for healthier food decisions.
+© 2026 NutriGuard AI

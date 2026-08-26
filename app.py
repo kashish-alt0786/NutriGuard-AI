@@ -14,12 +14,17 @@ st.info("ℹ️ **Educational research tool:** NutriGuard AI provides general nu
 
 # ── Secure risk bridge ─────────────────────────────────────────────────────
 # The diabetes-risk project links here with ?risk=<model result>.
-# Query parameters are treated as untrusted input and are strictly validated.
+# Query parameters are untrusted input and are strictly validated.
 query = st.query_params
 risk_from_predictor = None
+risk_source = None
 if "risk" in query:
-    risk_from_predictor = sanitize_risk(query.get("risk"), default=0.0)
-    if risk_from_predictor == 0.0 and str(query.get("risk")).strip() not in {"0", "0.0", "0.00"}:
+    raw_risk = query.get("risk")
+    risk_from_predictor = sanitize_risk(raw_risk, default=0.0)
+    risk_source = str(query.get("source", "")).strip()
+    raw_as_text = str(raw_risk).strip()
+    valid_raw = raw_as_text in {str(risk_from_predictor), f"{risk_from_predictor:.1f}", f"{risk_from_predictor:.2f}"}
+    if not valid_raw and risk_from_predictor == 0.0:
         st.warning("⚠️ The received risk value was invalid or outside 0–100%. A safe default of 0% was used.")
 
 with st.sidebar:
@@ -45,8 +50,13 @@ if "risk_profile" not in st.session_state:
 
 if risk_from_predictor is not None:
     connected_label = "Low" if risk_from_predictor < 30 else "Moderate" if risk_from_predictor < 60 else "Elevated"
-    st.success(f"🔗 **Risk received from Diabetes Risk Predictor: {risk_from_predictor:.1f}% — {connected_label.upper()}**")
-    st.caption("The actual model result was transferred automatically through a validated URL parameter.")
+    source_text = " from the Diabetes Risk Predictor" if risk_source == "diabetes-risk-predictor" else " through the risk handoff"
+    st.info(
+        f"ℹ️ **Integration Active:** Successfully ingested a statistical model risk vector of "
+        f"**{risk_from_predictor:.1f}%**{source_text}."
+    )
+    st.success(f"🔗 **Connected risk: {risk_from_predictor:.1f}% — {connected_label.upper()}**")
+    st.caption("The received value is validated before it is used to tailor educational nutrition emphasis.")
     use_connected = st.radio("Use the connected result?", ["Yes — use my predictor result", "No — enter another estimate"], horizontal=True)
 else:
     use_connected = "No — enter another estimate"
@@ -118,76 +128,43 @@ if manual_ingredients.strip():
 if selected_food is None and not manual_ingredients.strip():
     st.info("📷 Upload a meal or ✍️ enter ingredients to continue.")
 
-# ── Module 3: context-aware food intelligence ───────────────────────────────
+# ── Transparent system handshake ───────────────────────────────────────────
 st.divider()
-st.header("🧠 3. Food Intelligence")
-context = build_nutrition_context(risk_percentage, manual_ingredients)
-st.info(
-    f"ℹ️ **System Core: Risk-aware guidance activated**  \n"
-    f"Profile: **{context['risk']:.1f}% — {context['label']}**  \n"
-    f"Priority: **{context['priority']}**  \n"
-    f"Guidance rule: {context['focus']}"
-)
+st.subheader("🧠 NutriGuard Decision Context")
+st.info(f"ℹ️ **System Core:** {context['logic_trace']}")
+st.caption("This is a deterministic research rule layer. It does not claim to diagnose disease or predict an individual post-meal glucose response.")
 
-analyze = st.button("📊 Generate Food Analysis", use_container_width=True, type="primary")
-if analyze:
-    if selected_food is None:
-        st.warning("No verified nutrition-database food match is available yet. Please upload a clearer image or enter a food that appears in the database.")
-    else:
-        result = foods[foods["English"] == selected_food].iloc[0]
-        st.subheader(f"🍽️ {result['English']}")
+meal_context = manual_ingredients.strip() if manual_ingredients.strip() else (selected_food or ai_food or "")
+context = build_nutrition_context(risk_percentage, meal_context)
 
-        fiber_score = min(float(result["Fiber"]) / 10 * 100, 100)
-        protein_score = min(float(result["Protein"]) / 25 * 100, 100)
-        carb_score = max(0, 100 - float(result["Carbs"]) / 80 * 100)
-        nutrition_score = round(.4 * fiber_score + .35 * protein_score + .25 * carb_score)
-        st.metric("📊 Educational Nutrition Score", f"{nutrition_score}/100")
+if meal_context:
+    st.markdown("### 🎯 Educational Nutrition Focus")
+    st.write(context["focus"])
 
-        cols = st.columns(6)
-        vals = [("🔥 Calories", f"{result['Calories']} kcal"), ("🍞 Carbohydrates", f"{result['Carbs']} g"), ("🥩 Protein", f"{result['Protein']} g"), ("🥑 Fat", f"{result['Fat']} g"), ("🥦 Fiber", f"{result['Fiber']} g"), ("📉 GL", str(result["GL"]))]
-        for c, (label, value) in zip(cols, vals):
-            c.metric(label, value)
+    if selected_food:
+        selected_row = foods[foods["English"] == selected_food]
+        if not selected_row.empty:
+            row = selected_row.iloc[0]
+            c1, c2, c3, c4 = st.columns(4)
+            c1.metric("Calories", f"{row['Calories']} kcal")
+            c2.metric("Carbohydrates", f"{row['Carbs']} g")
+            c3.metric("Protein", f"{row['Protein']} g")
+            c4.metric("Fat", f"{row['Fat']} g")
 
-        st.subheader("🧠 Why This Meal?")
-        st.write(result["Why"])
+            if "GI" in row.index:
+                gi = float(row["GI"])
+                carbs = float(row["Carbs"])
+                gl = (gi * carbs) / 100.0
+                st.metric("Estimated Glycemic Load", f"{gl:.1f}")
+                st.caption("GI/GL values are estimates from the project's nutrition database and should not be interpreted as individual glucose predictions.")
 
-        gl = float(result["GL"])
-        impact = "🟢 LOW" if gl <= 10 else "🟡 MODERATE" if gl <= 19 else "🔴 HIGH"
-        st.subheader("📈 Glycemic Impact")
-        st.info(f"**{impact}** — Estimated GI: **{result['GI']}** | Estimated GL: **{result['GL']}**. These are educational estimates and actual response varies by person, portion, and preparation.")
+            if risk_label == "ELEVATED":
+                st.warning("🔎 Elevated-profile review: pay particular attention to added sugars, highly refined carbohydrates and portion size in this meal.")
+            elif risk_label == "MODERATE":
+                st.info("🔎 Moderate-profile review: consider fiber, protein, portion balance and carbohydrate quality when evaluating this meal.")
+            else:
+                st.success("🔎 Baseline review: focus on a balanced meal containing vegetables, fiber and adequate protein.")
 
-        st.subheader("🔄 Smart Swap")
-        a, b = st.columns(2)
-        a.success(f"Consider: **{result['HealthySwap']}**")
-        b.info(result["Why"])
-
-        st.subheader("🍽️ Build a Better Plate")
-        st.write("Example structure: more non-starchy vegetables, a fiber-rich carbohydrate source, a protein source, and a small amount of healthy fat. Individual needs vary.")
-        plate = pd.DataFrame({"Component": ["Vegetables", "Fiber-rich carbohydrate", "Protein", "Healthy fat"], "Share": [40, 25, 25, 10]})
-        st.plotly_chart(px.pie(plate, names="Component", values="Share", hole=.45, title="Example Balanced Plate"), use_container_width=True)
-
-        st.subheader("🔬 Logic Trace")
-        st.code(context["logic_trace"], language="text")
-        st.write("The meal analysis is combined with the received risk profile to prioritize educational nutrition guidance. NutriGuard currently uses deterministic rules and its nutrition database; it does not claim to use an LLM for medical decision-making.")
-
-        st.subheader("📈 Weekly Meal Impact — Demonstration")
-        history = pd.DataFrame({"Day": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"], "Impact": ["Low", "Moderate", "High", "Low", "Moderate", "High", "Low"]})
-        counts = history["Impact"].value_counts().reset_index()
-        counts.columns = ["Impact", "Days"]
-        st.plotly_chart(px.bar(counts, x="Impact", y="Days", text="Days", title="Example Weekly Summary"), use_container_width=True)
-        st.caption("This is a demonstration visualization, not a stored patient history.")
-
-# ── Resources ───────────────────────────────────────────────────────────────
-st.divider()
-st.header("📚 Educational Resources")
-a, b = st.columns(2)
-with a:
-    st.link_button("🇺🇸 American Diabetes Association", "https://diabetes.org")
-    st.link_button("🇺🇸 USDA FoodData Central", "https://fdc.nal.usda.gov")
-    st.link_button("🌍 World Health Organization", "https://www.who.int")
-with b:
-    st.link_button("🇮🇳 ICMR – National Institute of Nutrition", "https://www.nin.res.in")
-    st.link_button("🇰🇷 Korean Nutrition Society", "https://www.kns.or.kr")
-
-st.divider()
-st.caption("NutriGuard AI • Risk-aware educational nutrition intelligence • © 2026")
+st.markdown("---")
+st.subheader("📌 About the Risk Handoff")
+st.caption("The diabetes-risk application passes a statistical model output through a URL parameter. NutriGuard validates that value before applying its educational rules. The handoff does not establish a medical diagnosis or causal relationship between a meal and diabetes risk.")

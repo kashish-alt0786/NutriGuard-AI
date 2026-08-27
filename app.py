@@ -8,8 +8,23 @@ from src.usda_nutrition import search_usda_food
 
 ROOT = Path(__file__).parent
 st.set_page_config(page_title="NutriGuard AI", page_icon="🥗", layout="wide")
-foods = pd.read_csv(ROOT / "foods.csv")
-foods["food_key"] = foods["English"].astype(str).str.strip().str.lower()
+
+# Load the original project foods plus the expanded everyday-food database.
+def load_food_database():
+    frames = []
+    for filename in ("foods.csv", "everyday_foods.csv"):
+        path = ROOT / filename
+        if path.exists():
+            frames.append(pd.read_csv(path))
+    if not frames:
+        return pd.DataFrame(columns=["English", "Category", "Calories", "Carbs", "Protein", "Fat", "Fiber", "GI", "GL", "HealthySwap", "Why"])
+    combined = pd.concat(frames, ignore_index=True)
+    combined["English"] = combined["English"].astype(str).str.strip()
+    combined = combined[combined["English"].ne("")].drop_duplicates(subset=["English"], keep="first").copy()
+    combined["food_key"] = combined["English"].str.lower()
+    return combined
+
+foods = load_food_database()
 
 st.info("ℹ️ **Educational research tool:** NutriGuard AI provides general nutrition information and is not a medical diagnostic or treatment tool.")
 
@@ -26,6 +41,8 @@ with st.sidebar:
     st.divider()
     st.markdown("**Input flow**")
     st.markdown("1. Confirm risk profile\n2. Add a meal photo or ingredients\n3. Generate analysis")
+    st.divider()
+    st.caption(f"Food database: **{len(foods):,} records**")
 
 st.title("🥗 NutriGuard AI")
 st.subheader("Risk-Aware Nutrition Intelligence")
@@ -59,7 +76,7 @@ st.metric("Estimated Risk Profile", f"{risk_percentage:.0f}%", f"{risk_icon} {ri
 
 st.divider()
 st.header("🥗 2. My Meal")
-st.write("Upload a meal photo, enter ingredients, or use both. The analysis uses the local food database first and can use USDA FoodData Central when configured.")
+st.write("Upload a meal photo, enter ingredients, or use both. NutriGuard checks the expanded local food database first and can use USDA FoodData Central when configured.")
 image_col, manual_col = st.columns(2)
 with image_col:
     st.subheader("📷 Upload Your Meal")
@@ -91,16 +108,85 @@ if uploaded_image is not None:
 if ai_confidence is not None and ai_confidence < 70:
     st.warning(f"⚠️ Recognition confidence is {ai_confidence:.2f}%. Please verify the detected food before generating the analysis.")
 
+# Common everyday wording is mapped to the project's canonical food records.
+FOOD_ALIASES = {
+    "chicken": "Chicken Breast",
+    "chicken breast": "Chicken Breast",
+    "grilled chicken": "Grilled Chicken",
+    "fish": "Grilled Fish",
+    "prawn": "Prawns",
+    "prawns": "Prawns",
+    "shrimp": "Prawns",
+    "egg": "Egg",
+    "eggs": "Egg",
+    "rice": "White Rice",
+    "white rice": "White Rice",
+    "brown rice": "Brown Rice",
+    "roti": "Roti",
+    "chapati": "Chapati",
+    "dal": "Dal Tadka",
+    "lentils": "Lentil Soup",
+    "chickpeas": "Chickpea Salad",
+    "chana": "Chickpea Salad",
+    "beans": "Kidney Beans",
+    "kidney beans": "Kidney Beans",
+    "rajma": "Rajma Chawal",
+    "potato": "Potato",
+    "potatoes": "Potato",
+    "sweet potato": "Sweet Potato",
+    "oats": "Oats",
+    "yogurt": "Plain Yogurt",
+    "curd": "Curd",
+    "milk": "Milk",
+    "paneer": "Paneer",
+    "bread": "Whole Wheat Bread",
+    "whole wheat bread": "Whole Wheat Bread",
+    "apple": "Apple",
+    "banana": "Banana",
+    "orange": "Orange",
+    "mango": "Mango",
+    "avocado": "Avocado",
+    "tomato": "Tomato",
+    "spinach": "Spinach",
+    "broccoli": "Broccoli",
+    "cauliflower": "Cauliflower",
+    "carrot": "Carrot",
+    "cucumber": "Cucumber",
+    "corn": "Sweet Corn",
+    "popcorn": "Popcorn",
+    "almonds": "Almonds",
+    "peanuts": "Peanuts",
+    "walnuts": "Walnuts",
+    "cashews": "Cashews",
+    "pizza": "Pizza",
+    "burger": "Burger",
+    "pasta": "Pasta",
+    "noodles": "Noodles",
+    "fries": "French Fries",
+    "ice cream": "Ice Cream",
+}
+
 def find_local_food(name: str):
     key = name.strip().lower()
     if not key:
         return None
-    exact = foods[foods["food_key"] == key]
+
+    canonical = FOOD_ALIASES.get(key, name.strip())
+    canonical_key = canonical.lower()
+
+    exact = foods[foods["food_key"] == canonical_key]
     if len(exact):
         return exact.iloc[0]
+
+    # Try an exact match against the original wording too.
+    exact_original = foods[foods["food_key"] == key]
+    if len(exact_original):
+        return exact_original.iloc[0]
+
     contains = foods[foods["food_key"].str.contains(key, regex=False, na=False)]
     if len(contains):
         return contains.iloc[0]
+
     reverse = foods[foods["food_key"].apply(lambda value: key in value)]
     if len(reverse):
         return reverse.iloc[0]

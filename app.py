@@ -9,7 +9,7 @@ from src.usda_nutrition import search_usda_food
 ROOT = Path(__file__).parent
 st.set_page_config(page_title="NutriGuard AI", page_icon="🥗", layout="wide")
 
-# Load the original project foods plus the expanded everyday-food database.
+
 def load_food_database():
     frames = []
     for filename in ("foods.csv", "everyday_foods.csv"):
@@ -23,6 +23,7 @@ def load_food_database():
     combined = combined[combined["English"].ne("")].drop_duplicates(subset=["English"], keep="first").copy()
     combined["food_key"] = combined["English"].str.lower()
     return combined
+
 
 foods = load_food_database()
 
@@ -43,7 +44,7 @@ with st.sidebar:
     st.markdown("1. Confirm risk profile\n2. Add a meal photo or ingredients\n3. Generate analysis")
     st.divider()
     st.caption(f"Food database: **{len(foods):,} records**")
-    st.caption("Image classifier: **Food-101 · 101 labels**")
+    st.caption("Image recognition: **Food-101 + broad zero-shot vocabulary**")
 
 st.title("🥗 NutriGuard AI")
 st.subheader("Risk-Aware Nutrition Intelligence")
@@ -88,6 +89,7 @@ with manual_col:
 
 ai_food = None
 ai_confidence = None
+recognition = None
 if uploaded_image is not None:
     from PIL import Image
     image = Image.open(uploaded_image).convert("RGB")
@@ -98,7 +100,13 @@ if uploaded_image is not None:
         ai_food = recognition["food"]
         ai_confidence = float(recognition["confidence"])
         st.success(f"🍽️ Detected food: **{ai_food}**")
-        st.caption(f"Classifier: **Food-101 ({recognition['label_count']} labels)** · Model label: `{recognition['model_label']}`")
+        source_name = recognition.get("recognition_mode", "pretrained image recognition")
+        st.caption(
+            f"Recognition route: **{source_name}** · Model: `{recognition['classifier']}` · "
+            f"Search vocabulary: **{recognition['label_count']} food labels**"
+        )
+        if recognition.get("recognition_mode") == "broad zero-shot fallback":
+            st.info("🌎 Broad recognition was activated because the fixed Food-101 classifier was uncertain. Please verify the detected food before analysis.")
         st.metric("🎯 Recognition Confidence", f"{ai_confidence:.2f}%")
         with st.expander("🔎 View top predictions"):
             for i, prediction in enumerate(recognition["predictions"], 1):
@@ -111,7 +119,6 @@ if uploaded_image is not None:
 if ai_confidence is not None and ai_confidence < 70:
     st.warning(f"⚠️ Recognition confidence is {ai_confidence:.2f}%. Please verify the detected food before generating the analysis.")
 
-# Common everyday wording is mapped to the project's canonical food records.
 FOOD_ALIASES = {
     "chicken": "Chicken Breast", "chicken breast": "Chicken Breast", "grilled chicken": "Grilled Chicken",
     "fish": "Grilled Fish", "prawn": "Prawns", "prawns": "Prawns", "shrimp": "Prawns",
@@ -127,6 +134,7 @@ FOOD_ALIASES = {
     "cashews": "Cashews", "pizza": "Pizza", "burger": "Burger", "pasta": "Pasta", "noodles": "Noodles",
     "fries": "French Fries", "ice cream": "Ice Cream",
 }
+
 
 def find_local_food(name: str):
     key = name.strip().lower()
@@ -147,6 +155,7 @@ def find_local_food(name: str):
     if len(reverse):
         return reverse.iloc[0]
     return None
+
 
 meal_text = manual_ingredients.strip()
 if not meal_text and ai_food:

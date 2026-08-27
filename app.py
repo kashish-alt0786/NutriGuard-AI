@@ -43,6 +43,7 @@ with st.sidebar:
     st.markdown("1. Confirm risk profile\n2. Add a meal photo or ingredients\n3. Generate analysis")
     st.divider()
     st.caption(f"Food database: **{len(foods):,} records**")
+    st.caption("Image classifier: **Food-101 · 101 labels**")
 
 st.title("🥗 NutriGuard AI")
 st.subheader("Risk-Aware Nutrition Intelligence")
@@ -97,10 +98,12 @@ if uploaded_image is not None:
         ai_food = recognition["food"]
         ai_confidence = float(recognition["confidence"])
         st.success(f"🍽️ Detected food: **{ai_food}**")
+        st.caption(f"Classifier: **Food-101 ({recognition['label_count']} labels)** · Model label: `{recognition['model_label']}`")
         st.metric("🎯 Recognition Confidence", f"{ai_confidence:.2f}%")
         with st.expander("🔎 View top predictions"):
             for i, prediction in enumerate(recognition["predictions"], 1):
-                st.write(f"{i}. **{prediction['label'].replace('_', ' ').title()}** — {prediction['score'] * 100:.2f}%")
+                display_label = prediction.get("display_label", str(prediction["label"]).replace("_", " ").title())
+                st.write(f"{i}. **{display_label}** — {prediction['score'] * 100:.2f}%")
     except Exception as exc:
         st.error("The image could not be analyzed. Please try a clearer meal photo or enter the food name manually.")
         st.caption(f"Technical detail: {type(exc).__name__}")
@@ -110,83 +113,36 @@ if ai_confidence is not None and ai_confidence < 70:
 
 # Common everyday wording is mapped to the project's canonical food records.
 FOOD_ALIASES = {
-    "chicken": "Chicken Breast",
-    "chicken breast": "Chicken Breast",
-    "grilled chicken": "Grilled Chicken",
-    "fish": "Grilled Fish",
-    "prawn": "Prawns",
-    "prawns": "Prawns",
-    "shrimp": "Prawns",
-    "egg": "Egg",
-    "eggs": "Egg",
-    "rice": "White Rice",
-    "white rice": "White Rice",
-    "brown rice": "Brown Rice",
-    "roti": "Roti",
-    "chapati": "Chapati",
-    "dal": "Dal Tadka",
-    "lentils": "Lentil Soup",
-    "chickpeas": "Chickpea Salad",
-    "chana": "Chickpea Salad",
-    "beans": "Kidney Beans",
-    "kidney beans": "Kidney Beans",
-    "rajma": "Rajma Chawal",
-    "potato": "Potato",
-    "potatoes": "Potato",
-    "sweet potato": "Sweet Potato",
-    "oats": "Oats",
-    "yogurt": "Plain Yogurt",
-    "curd": "Curd",
-    "milk": "Milk",
-    "paneer": "Paneer",
-    "bread": "Whole Wheat Bread",
-    "whole wheat bread": "Whole Wheat Bread",
-    "apple": "Apple",
-    "banana": "Banana",
-    "orange": "Orange",
-    "mango": "Mango",
-    "avocado": "Avocado",
-    "tomato": "Tomato",
-    "spinach": "Spinach",
-    "broccoli": "Broccoli",
-    "cauliflower": "Cauliflower",
-    "carrot": "Carrot",
-    "cucumber": "Cucumber",
-    "corn": "Sweet Corn",
-    "popcorn": "Popcorn",
-    "almonds": "Almonds",
-    "peanuts": "Peanuts",
-    "walnuts": "Walnuts",
-    "cashews": "Cashews",
-    "pizza": "Pizza",
-    "burger": "Burger",
-    "pasta": "Pasta",
-    "noodles": "Noodles",
-    "fries": "French Fries",
-    "ice cream": "Ice Cream",
+    "chicken": "Chicken Breast", "chicken breast": "Chicken Breast", "grilled chicken": "Grilled Chicken",
+    "fish": "Grilled Fish", "prawn": "Prawns", "prawns": "Prawns", "shrimp": "Prawns",
+    "egg": "Egg", "eggs": "Egg", "rice": "White Rice", "white rice": "White Rice", "brown rice": "Brown Rice",
+    "roti": "Roti", "chapati": "Chapati", "dal": "Dal Tadka", "lentils": "Lentil Soup",
+    "chickpeas": "Chickpea Salad", "chana": "Chickpea Salad", "beans": "Kidney Beans", "kidney beans": "Kidney Beans",
+    "rajma": "Rajma Chawal", "potato": "Potato", "potatoes": "Potato", "sweet potato": "Sweet Potato",
+    "oats": "Oats", "yogurt": "Plain Yogurt", "curd": "Curd", "milk": "Milk", "paneer": "Paneer",
+    "bread": "Whole Wheat Bread", "whole wheat bread": "Whole Wheat Bread", "apple": "Apple", "banana": "Banana",
+    "orange": "Orange", "mango": "Mango", "avocado": "Avocado", "tomato": "Tomato", "spinach": "Spinach",
+    "broccoli": "Broccoli", "cauliflower": "Cauliflower", "carrot": "Carrot", "cucumber": "Cucumber",
+    "corn": "Sweet Corn", "popcorn": "Popcorn", "almonds": "Almonds", "peanuts": "Peanuts", "walnuts": "Walnuts",
+    "cashews": "Cashews", "pizza": "Pizza", "burger": "Burger", "pasta": "Pasta", "noodles": "Noodles",
+    "fries": "French Fries", "ice cream": "Ice Cream",
 }
 
 def find_local_food(name: str):
     key = name.strip().lower()
     if not key:
         return None
-
     canonical = FOOD_ALIASES.get(key, name.strip())
     canonical_key = canonical.lower()
-
     exact = foods[foods["food_key"] == canonical_key]
     if len(exact):
         return exact.iloc[0]
-
-    # Try an exact match against the original wording too.
     exact_original = foods[foods["food_key"] == key]
     if len(exact_original):
         return exact_original.iloc[0]
-
     contains = foods[foods["food_key"].str.contains(key, regex=False, na=False)]
     if len(contains):
         return contains.iloc[0]
-
     reverse = foods[foods["food_key"].apply(lambda value: key in value)]
     if len(reverse):
         return reverse.iloc[0]

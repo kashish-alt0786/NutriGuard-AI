@@ -20,12 +20,13 @@ flowchart LR
     C --> D[Validated URL Handoff]
     D --> E[NutriGuard Risk Profile]
     E --> F[Meal Image / Manual Ingredients]
-    F --> G[Food Recognition]
-    G --> H[Expanded Food Database]
-    H --> I[GI + GL + Macro Analysis]
-    E --> J[Risk-Aware Guidance Rules]
-    I --> J
-    J --> K[Educational Nutrition Guidance]
+    F --> G[Food-101 Image Classifier]
+    G --> H[101 Pretrained Food Labels]
+    H --> I[Expanded Food Database / USDA]
+    I --> J[GI + GL + Macro Analysis]
+    E --> K[Risk-Aware Guidance Rules]
+    J --> K
+    K --> L[Educational Nutrition Guidance]
 ```
 
 The diabetes application sends its model output using a `risk` query parameter. NutriGuard treats this value as untrusted external input, validates it as a percentage between 0 and 100, and falls back safely when the value is invalid.
@@ -53,21 +54,26 @@ The interface displays a **System Core / Logic Trace** so reviewers can see how 
 
 > **Engineering honesty:** the current repository does not contain an LLM-based medical dietitian. The context layer is deliberately implemented as deterministic rules rather than pretending that an LLM or clinical decision engine exists.
 
-## 📷 Meal Intelligence
+## 📷 Pretrained Food Image Recognition
 
-- Upload JPG, JPEG or PNG meal images.
-- Display detected food and recognition confidence.
-- Show top recognition candidates.
-- Allow manual ingredient context to supplement recognition.
-- Match common everyday wording such as `rice`, `chicken`, `egg`, `fish`, `bread`, `oats`, `yogurt`, `apple`, `banana`, `broccoli` and more to canonical nutrition records.
+NutriGuard uses the Hugging Face `nateraw/food` image-classification model. The model is a Vision Transformer fine-tuned on **Food-101**, whose published vocabulary contains **101 learned food categories**. The model is not a universal classifier for every food in the world. citeturn0search1turn1search4
 
-### Image Recognition vs. Nutrition Coverage
+The repository now explicitly tracks the 101 pretrained labels in `food_recognition.py` and keeps both:
 
-The nutrition database and image-recognition model are separate components. Adding a food to the nutrition database improves **manual nutrition matching**, but does not automatically teach the image classifier to recognize that food. The image model's recognition vocabulary remains dependent on its pretrained classes and confidence.
+- the original **model label** for traceability; and
+- a cleaner **display label** for the interface.
+
+This is a label adapter, not a claim that the pretrained model has been retrained. Adding a new food to the nutrition database improves nutrition matching but does **not** teach the image model to visually recognize that food.
+
+The application also shows the classifier name and label count after an image is processed, making the image-recognition pipeline easier for a reviewer to inspect.
+
+### Food-101 classifier vocabulary
+
+The pretrained classifier covers categories such as apple pie, bibimbap, Caesar salad, chicken curry, chicken wings, cheesecake, chocolate cake, French fries, fried rice, grilled salmon, hamburger, hummus, ice cream, lasagna, macaroni and cheese, miso soup, omelette, pad thai, pancakes, pizza, ramen, samosa, sushi, tacos, tiramisu and waffles, among 101 total categories. citeturn1search0turn1search6
 
 ## 🍎 Expanded Food Database
 
-NutriGuard now combines the original `foods.csv` records with `everyday_foods.csv`.
+NutriGuard combines the original `foods.csv` records with `everyday_foods.csv`.
 
 The expanded database covers everyday foods across categories including:
 
@@ -108,11 +114,12 @@ python -m pytest -q
 ```text
 NutriGuard-AI/
 ├── src/
-│   └── risk_context.py
+│   ├── risk_context.py
+│   └── usda_nutrition.py
 ├── tests/
 │   └── test_risk_context.py
 ├── app.py
-├── food_recognition.py
+├── food_recognition.py        # Food-101 classifier + 101-label adapter
 ├── foods.csv
 ├── everyday_foods.csv
 ├── translations.py
@@ -136,7 +143,7 @@ NutriGuard-AI/
 
 ## 🔬 What Makes the Project Different
 
-**Risk estimation → secure data handoff → risk-aware nutrition context → meal recognition → expanded nutrition database → transparent nutrition analysis → educational guidance**
+**Risk estimation → secure data handoff → risk-aware nutrition context → 101-class food recognition → expanded nutrition database → transparent nutrition analysis → educational guidance**
 
 This demonstrates how separate AI/data components can communicate while keeping their limitations explicit.
 
@@ -170,6 +177,6 @@ GitHub: https://github.com/kashish-alt0786/NutriGuard-AI
 
 ## 📌 Version
 
-`v1.2.0`
+`v1.3.0`
 
 © 2026 NutriGuard AI

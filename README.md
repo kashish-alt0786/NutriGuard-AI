@@ -20,13 +20,16 @@ flowchart LR
     C --> D[Validated URL Handoff]
     D --> E[NutriGuard Risk Profile]
     E --> F[Meal Image / Manual Ingredients]
-    F --> G[Food-101 Image Classifier]
-    G --> H[101 Pretrained Food Labels]
-    H --> I[Expanded Food Database / USDA]
-    I --> J[GI + GL + Macro Analysis]
-    E --> K[Risk-Aware Guidance Rules]
+    F --> G[Food Recognition Layer]
+    G --> H{Food-101 Confidence}
+    H -->|High confidence| I[Food-101 Learned Labels]
+    H -->|Low confidence| J[CLIP Broad Zero-Shot Vocabulary]
+    I --> K[Expanded Food Database / USDA]
     J --> K
-    K --> L[Educational Nutrition Guidance]
+    K --> L[GI + GL + Macro Analysis]
+    E --> M[Risk-Aware Guidance Rules]
+    L --> M
+    M --> N[Educational Nutrition Guidance]
 ```
 
 The diabetes application sends its model output using a `risk` query parameter. NutriGuard treats this value as untrusted external input, validates it as a percentage between 0 and 100, and falls back safely when the value is invalid.
@@ -54,22 +57,29 @@ The interface displays a **System Core / Logic Trace** so reviewers can see how 
 
 > **Engineering honesty:** the current repository does not contain an LLM-based medical dietitian. The context layer is deliberately implemented as deterministic rules rather than pretending that an LLM or clinical decision engine exists.
 
-## 📷 Pretrained Food Image Recognition
+## 📷 Two-Stage Pretrained Food Recognition
 
-NutriGuard uses the Hugging Face `nateraw/food` image-classification model. The model is a Vision Transformer fine-tuned on **Food-101**, whose published vocabulary contains **101 learned food categories**. The model is not a universal classifier for every food in the world. citeturn0search1turn1search4
+NutriGuard now uses a two-stage recognition strategy:
 
-The repository now explicitly tracks the 101 pretrained labels in `food_recognition.py` and keeps both:
+1. **Food-101 classifier:** `nateraw/food` provides a fixed set of 101 learned food categories.
+2. **Broad zero-shot fallback:** when Food-101 confidence is below 70%, the application uses `openai/clip-vit-base-patch32` to compare the image against a broader vocabulary of everyday foods.
 
-- the original **model label** for traceability; and
-- a cleaner **display label** for the interface.
+The second stage does **not** retrain CLIP or claim that every food can be identified perfectly. It is a zero-shot matching layer that gives the application a substantially wider vocabulary than Food-101 while remaining transparent about uncertainty.
 
-This is a label adapter, not a claim that the pretrained model has been retrained. Adding a new food to the nutrition database improves nutrition matching but does **not** teach the image model to visually recognize that food.
+The broad vocabulary includes fruits, vegetables, grains, Indian foods, Asian foods, breads, pasta, noodles, meats, seafood, dairy, legumes, snacks, desserts and beverages. The current vocabulary contains well over 200 food labels and can be expanded without retraining a classifier head.
 
-The application also shows the classifier name and label count after an image is processed, making the image-recognition pipeline easier for a reviewer to inspect.
+For traceability, the application reports:
 
-### Food-101 classifier vocabulary
+- the recognition route used;
+- the model name;
+- the number of candidate labels searched;
+- the detected food;
+- recognition confidence; and
+- top alternative predictions.
 
-The pretrained classifier covers categories such as apple pie, bibimbap, Caesar salad, chicken curry, chicken wings, cheesecake, chocolate cake, French fries, fried rice, grilled salmon, hamburger, hummus, ice cream, lasagna, macaroni and cheese, miso soup, omelette, pad thai, pancakes, pizza, ramen, samosa, sushi, tacos, tiramisu and waffles, among 101 total categories. citeturn1search0turn1search6
+### Why not claim “every food in the world”?
+
+A responsible image-recognition system should not claim universal recognition unless it has been trained and validated for that scope. Food appearance varies with cuisine, preparation, plating, lighting and mixed dishes. NutriGuard therefore uses **broad recognition + confidence reporting + manual ingredient correction + nutrition-data fallback** instead of presenting uncertain predictions as facts.
 
 ## 🍎 Expanded Food Database
 
@@ -119,7 +129,7 @@ NutriGuard-AI/
 ├── tests/
 │   └── test_risk_context.py
 ├── app.py
-├── food_recognition.py        # Food-101 classifier + 101-label adapter
+├── food_recognition.py        # Food-101 + broad CLIP recognition
 ├── foods.csv
 ├── everyday_foods.csv
 ├── translations.py
@@ -143,9 +153,9 @@ NutriGuard-AI/
 
 ## 🔬 What Makes the Project Different
 
-**Risk estimation → secure data handoff → risk-aware nutrition context → 101-class food recognition → expanded nutrition database → transparent nutrition analysis → educational guidance**
+**Risk estimation → secure data handoff → risk-aware nutrition context → two-stage food-image recognition → expanded nutrition database → transparent nutrition analysis → educational guidance**
 
-This demonstrates how separate AI/data components can communicate while keeping their limitations explicit.
+The project demonstrates a useful engineering pattern: a specialized supervised classifier handles known classes first, while a zero-shot vision-language model provides broader vocabulary coverage when the specialist model is uncertain. The nutrition layer remains separate from image recognition, making the system easier to extend and audit.
 
 ## 🔐 Privacy and Medical Scope
 
@@ -153,7 +163,7 @@ NutriGuard AI is an educational application. It does not diagnose diabetes, pres
 
 The risk handoff uses a URL query parameter for application-integration demonstration. The project does not claim to maintain a persistent electronic health record or clinical patient database.
 
-Food recognition, GI/GL values and nutrition estimates can vary with ingredients, preparation methods, portion size and image quality.
+Food recognition, GI/GL values and nutrition estimates can vary with ingredients, preparation methods, portion size and image quality. Users should verify uncertain image predictions and manually correct the meal description when needed.
 
 ## 🚀 Run Locally
 
@@ -164,6 +174,8 @@ python -m pip install -r requirements.txt
 python -m pytest -q
 streamlit run app.py
 ```
+
+The first image-recognition request may download pretrained Hugging Face model weights. The broad CLIP fallback requires additional memory and may take longer to initialize than the Food-101 classifier.
 
 ## ⚠️ Medical Disclaimer
 
@@ -177,6 +189,6 @@ GitHub: https://github.com/kashish-alt0786/NutriGuard-AI
 
 ## 📌 Version
 
-`v1.3.0`
+`v1.4.0`
 
 © 2026 NutriGuard AI

@@ -2,7 +2,7 @@
 
 ## Risk-Aware Educational Nutrition Assistant
 
-NutriGuard AI is the nutrition companion to the **Explainable AI Diabetes Risk Prediction** project. It combines meal-image recognition, a nutrition database, glycemic-impact estimates and a validated diabetes-risk handoff to create a connected educational workflow.
+NutriGuard AI is the nutrition companion to the **Explainable AI Diabetes Risk Prediction** project. It combines meal-image recognition, an expanded everyday-food nutrition database, glycemic-impact estimates and a validated diabetes-risk handoff to create a connected educational workflow.
 
 ## 🌐 Live Applications
 
@@ -21,7 +21,7 @@ flowchart LR
     D --> E[NutriGuard Risk Profile]
     E --> F[Meal Image / Manual Ingredients]
     F --> G[Food Recognition]
-    G --> H[Nutrition Database]
+    G --> H[Expanded Food Database]
     H --> I[GI + GL + Macro Analysis]
     E --> J[Risk-Aware Guidance Rules]
     I --> J
@@ -58,14 +58,42 @@ The interface displays a **System Core / Logic Trace** so reviewers can see how 
 - Upload JPG, JPEG or PNG meal images.
 - Display detected food and recognition confidence.
 - Show top recognition candidates.
-- Apply a confidence threshold before matching the food to the nutrition database.
 - Allow manual ingredient context to supplement recognition.
+- Match common everyday wording such as `rice`, `chicken`, `egg`, `fish`, `bread`, `oats`, `yogurt`, `apple`, `banana`, `broccoli` and more to canonical nutrition records.
+
+### Image Recognition vs. Nutrition Coverage
+
+The nutrition database and image-recognition model are separate components. Adding a food to the nutrition database improves **manual nutrition matching**, but does not automatically teach the image classifier to recognize that food. The image model's recognition vocabulary remains dependent on its pretrained classes and confidence.
+
+## 🍎 Expanded Food Database
+
+NutriGuard now combines the original `foods.csv` records with `everyday_foods.csv`.
+
+The expanded database covers everyday foods across categories including:
+
+- Fruits and vegetables
+- Rice, grains and cereals
+- Lentils, beans and legumes
+- Eggs, dairy and plant proteins
+- Chicken, fish and seafood
+- Breads, pasta and noodles
+- Salads, soups and common meals
+- Indian foods and snacks
+- Korean foods and meals
+- Nuts, seeds and spreads
+- Desserts and beverages
+
+Each record can provide calories, carbohydrates, protein, fat, fiber, estimated GI/GL and an educational healthier-swap suggestion where available.
+
+The application combines both CSV files at startup and removes duplicate food names, so the interface can work with the expanded set without requiring a separate selection screen.
 
 ## 📊 Nutrition Analysis
 
-For a verified food match, NutriGuard displays calories, carbohydrates, protein, fat, fiber, estimated GI, estimated GL, an educational nutrition score, a healthier food swap and a balanced-plate visualization.
+For a verified food match, NutriGuard displays calories, carbohydrates, protein, fat, fiber, estimated GI/GL where available, a risk-aware educational focus and healthier food-swap suggestions.
 
-GI/GL and nutrition scores are explicitly educational estimates because actual nutritional values vary with portion size, ingredients and preparation.
+The **Generate Nutrition Analysis** button is the explicit action that turns the submitted meal context into the visible analysis section.
+
+GI/GL and nutrition values are educational estimates because actual nutritional values vary with portion size, ingredients and preparation.
 
 ## 🧪 Automated Tests
 
@@ -86,6 +114,7 @@ NutriGuard-AI/
 ├── app.py
 ├── food_recognition.py
 ├── foods.csv
+├── everyday_foods.csv
 ├── translations.py
 ├── requirements.txt
 ├── .streamlit/
@@ -107,7 +136,7 @@ NutriGuard-AI/
 
 ## 🔬 What Makes the Project Different
 
-**Risk estimation → secure data handoff → risk-aware nutrition context → meal recognition → nutrition analysis → educational guidance**
+**Risk estimation → secure data handoff → risk-aware nutrition context → meal recognition → expanded nutrition database → transparent nutrition analysis → educational guidance**
 
 This demonstrates how separate AI/data components can communicate while keeping their limitations explicit.
 
@@ -141,6 +170,6 @@ GitHub: https://github.com/kashish-alt0786/NutriGuard-AI
 
 ## 📌 Version
 
-`v1.1.0`
+`v1.2.0`
 
 © 2026 NutriGuard AI

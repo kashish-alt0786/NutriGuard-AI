@@ -5,6 +5,7 @@ from pathlib import Path
 from food_recognition import recognize_food
 from src.risk_context import build_nutrition_context, sanitize_risk
 from src.usda_nutrition import search_usda_food
+from src.portion_utils import scale_nutrition
 
 ROOT = Path(__file__).parent
 st.set_page_config(page_title="NutriGuard AI", page_icon="🥗", layout="wide")
@@ -41,7 +42,7 @@ with st.sidebar:
     st.caption("Risk-aware educational nutrition analysis")
     st.divider()
     st.markdown("**Input flow**")
-    st.markdown("1. Confirm risk profile\n2. Add a meal photo or ingredients\n3. Generate analysis")
+    st.markdown("1. Confirm risk profile\n2. Add a meal photo or ingredients\n3. Set serving size\n4. Generate analysis")
     st.divider()
     st.caption(f"Food database: **{len(foods):,} records**")
     st.caption("Image recognition: **Food-101 + broad zero-shot vocabulary**")
@@ -101,10 +102,7 @@ if uploaded_image is not None:
         ai_confidence = float(recognition["confidence"])
         st.success(f"🍽️ Detected food: **{ai_food}**")
         source_name = recognition.get("recognition_mode", "pretrained image recognition")
-        st.caption(
-            f"Recognition route: **{source_name}** · Model: `{recognition['classifier']}` · "
-            f"Search vocabulary: **{recognition['label_count']} food labels**"
-        )
+        st.caption(f"Recognition route: **{source_name}** · Model: `{recognition['classifier']}` · Search vocabulary: **{recognition['label_count']} food labels**")
         if recognition.get("recognition_mode") == "broad zero-shot fallback":
             st.info("🌎 Broad recognition was activated because the fixed Food-101 classifier was uncertain. Please verify the detected food before analysis.")
         st.metric("🎯 Recognition Confidence", f"{ai_confidence:.2f}%")
@@ -139,22 +137,19 @@ FOOD_ALIASES = {
 def find_local_food(name: str):
     key = name.strip().lower()
     if not key:
-        return None
+        return None, "unmatched"
     canonical = FOOD_ALIASES.get(key, name.strip())
     canonical_key = canonical.lower()
     exact = foods[foods["food_key"] == canonical_key]
     if len(exact):
-        return exact.iloc[0]
+        return exact.iloc[0], "alias" if key != canonical_key else "exact"
     exact_original = foods[foods["food_key"] == key]
     if len(exact_original):
-        return exact_original.iloc[0]
+        return exact_original.iloc[0], "exact"
     contains = foods[foods["food_key"].str.contains(key, regex=False, na=False)]
     if len(contains):
-        return contains.iloc[0]
-    reverse = foods[foods["food_key"].apply(lambda value: key in value)]
-    if len(reverse):
-        return reverse.iloc[0]
-    return None
+        return contains.iloc[0], "fuzzy"
+    return None, "unmatched"
 
 
 meal_text = manual_ingredients.strip()
@@ -162,13 +157,15 @@ if not meal_text and ai_food:
     meal_text = ai_food
 
 local_rows = []
+match_types = []
 unmatched = []
 if meal_text:
     items = [x.strip() for x in meal_text.replace("\n", ",").split(",") if x.strip()]
     for item in items:
-        row = find_local_food(item)
+        row, match_type = find_local_food(item)
         if row is not None:
             local_rows.append(row)
+            match_types.append(match_type)
         else:
             unmatched.append(item)
 
@@ -183,8 +180,16 @@ if unmatched:
 if meal_text:
     st.caption(f"✍️ Meal context: **{meal_text}**")
 
+st.markdown("### ⚖️ Serving Size / Portion Adjustment")
+serving_mode = st.radio("Choose portion size", ["100 g", "150 g", "200 g", "Custom"], horizontal=True)
+if serving_mode == "Custom":
+    serving_grams = st.number_input("Custom serving (grams)", min_value=1.0, max_value=2000.0, value=100.0, step=10.0)
+else:
+    serving_grams = float(serving_mode.split()[0])
+st.caption(f"Nutrition values are scaled to approximately **{serving_grams:.0f} g** for each matched local food record. Actual nutrition varies by food, preparation and portion measurement.")
+
 st.markdown("### 🔍 Ready to Analyze?")
-st.caption("Add a meal above, then generate its nutrition analysis.")
+st.caption("Add a meal above, choose a serving size, then generate its nutrition analysis.")
 if "analysis_requested" not in st.session_state:
     st.session_state.analysis_requested = False
 
@@ -199,11 +204,12 @@ st.divider()
 st.markdown("## 🍽️ Nutrition Analysis")
 if st.session_state.analysis_requested and (meal_text or uploaded_image is not None):
     if local_rows or usda_results:
-        local_calories = sum(float(r["Calories"]) for r in local_rows)
-        local_carbs = sum(float(r["Carbs"]) for r in local_rows)
-        local_protein = sum(float(r["Protein"]) for r in local_rows)
-        local_fat = sum(float(r["Fat"]) for r in local_rows)
-        local_fiber = sum(float(r["Fiber"]) for r in local_rows)
+        scaled_rows = [scale_nutrition(row.to_dict(), serving_grams) for row in local_rows]
+        local_calories = sum(r["Calories"] for r in scaled_rows)
+        local_carbs = sum(r["Carbs"] for r in scaled_rows)
+        local_protein = sum(r["Protein"] for r in scaled_rows)
+        local_fat = sum(r["Fat"] for r in scaled_rows)
+        local_fiber = sum(r["Fiber"] for r in scaled_rows)
         usda_calories = sum(float(r["calories"]) for r in usda_results if r.get("calories") is not None)
         usda_carbs = sum(float(r["carbs"]) for r in usda_results if r.get("carbs") is not None)
         usda_protein = sum(float(r["protein"]) for r in usda_results if r.get("protein") is not None)
@@ -222,9 +228,9 @@ if st.session_state.analysis_requested and (meal_text or uploaded_image is not N
             d.metric("Fat", f"{fat:.1f} g" if fat else "N/A")
             e.metric("Fiber", f"{fiber:.1f} g" if fiber else "N/A")
             if local_rows:
-                gl = sum(float(r["GL"]) for r in local_rows if "GL" in r.index)
+                gl = sum(r["GL"] for r in scaled_rows)
                 if not gl:
-                    gl = sum(float(r["GI"]) * float(r["Carbs"]) / 100 for r in local_rows if "GI" in r.index)
+                    gl = sum(r["GI"] * r["Carbs"] / 100 for r in scaled_rows)
                 st.metric("Estimated Glycemic Load", f"{gl:.1f}" if gl else "N/A")
                 st.caption("GI/GL values are estimates from the project's nutrition records, not individual glucose predictions.")
             if local_rows:
@@ -232,6 +238,27 @@ if st.session_state.analysis_requested and (meal_text or uploaded_image is not N
                 st.success(f"✓ Local nutrition match: **{matched_names}**")
             if usda_results:
                 st.caption("🌎 Additional nutrition records were matched through USDA FoodData Central.")
+
+        st.markdown("### 📊 Model Evaluation")
+        ev1, ev2, ev3, ev4 = st.columns(4)
+        ev1.metric("Food-101 Classes", "101")
+        ev2.metric("Recognition Confidence", f"{ai_confidence:.1f}%" if ai_confidence is not None else "Manual input")
+        ev3.metric("Items Matched", str(len(local_rows) + len(usda_results)))
+        exact_count = match_types.count("exact")
+        alias_count = match_types.count("alias")
+        local_total = len(match_types)
+        ev4.metric("Local Exact/Alias", f"{exact_count + alias_count}/{local_total}" if local_total else "N/A")
+        st.caption("Top-1/Top-5 accuracy and nutrition matching rates require a labelled benchmark. They are not inferred from one prediction. See MODEL_EVALUATION.md for the evaluation protocol.")
+        if recognition:
+            st.write("**Top predictions for this image:**")
+            pred_df = pd.DataFrame([
+                {"Rank": i, "Food": p.get("display_label", str(p["label"]).replace("_", " ").title()), "Confidence": f"{p['score'] * 100:.2f}%"}
+                for i, p in enumerate(recognition["predictions"], 1)
+            ])
+            st.dataframe(pred_df, hide_index=True, use_container_width=True)
+
+        st.markdown("### 🔗 End-to-End Pipeline")
+        st.code("Image → Food Recognition → Food Name Normalization → Nutrition Database → Nutrition Analysis → Risk-Aware Educational Guidance", language="text")
 
         st.markdown("### 🎯 Personalized Educational Focus")
         st.write(risk_context["focus"])
